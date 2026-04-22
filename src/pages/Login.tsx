@@ -27,6 +27,7 @@ const Login = () => {
         emp_id: role === "technician" ? "TECH001" : "REQ042",
         name: role === "technician" ? "สมศักดิ์ ช่างไฟ" : "นภดล ฝ่ายผลิต",
         role,
+        department: role === "technician" ? "Maintenance" : "ฝ่ายผลิต",
         skills: ["electrical", "facility"],
       }),
     );

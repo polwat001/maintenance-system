@@ -1,228 +1,369 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  PRIORITY_RANK,
-  Priority,
-  Status,
-} from "@/lib/mockData";
-import { requestStore, useRequests } from "@/lib/requestStore";
-import { JobCard } from "@/components/JobCard";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Wrench, LogOut, Search, LayoutGrid, List, Filter, Bell } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Bell, Filter, LayoutGrid, List, LogOut, Search, Wrench } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { JobCard } from "@/components/JobCard";
+import { requestStore, useRequests } from "@/lib/requestStore";
+import {
+  CATEGORY_LABEL,
+  PRIORITY_RANK,
+  PRIORITY_LABEL,
+  Status,
+  STATUS_LABEL,
+  SUB_STATUS_LABEL,
+  SubStatus,
+  WorkRequest,
+} from "@/lib/mockData";
+import { cn } from "@/lib/utils";
 
+const TECHNICIAN_NAME = "สมศักดิ์ ช่างไฟ";
 const STATUS_COLUMNS: { key: Status; title: string; accent: string }[] = [
-  { key: "new", title: "งานใหม่ · พร้อมรับ", accent: "border-t-status-new" },
-  { key: "doing", title: "กำลังซ่อม", accent: "border-t-status-doing" },
-  { key: "waiting", title: "รออะไหล่", accent: "border-t-status-waiting" },
+  { key: "open", title: "เปิดงาน", accent: "border-sky-500 " },
+  { key: "assess", title: "ประเมินงาน", accent: "border-amber-500" },
+  { key: "waiting", title: "รออะไหล่", accent: "border-rose-500" },
+  { key: "doing", title: "กำลังซ่อม", accent: "border-cyan-500" },
+  { key: "done", title: "ปิดงาน", accent: "border-orange-500" },
+  { key: "qc1", title: "รอตรวจครั้งที่ 1", accent: "border-violet-500" },
+  { key: "qc2", title: "รอตรวจครั้งที่ 2", accent: "border-fuchsia-500" },
+  { key: "complete", title: "เสร็จสิ้น", accent: "border-emerald-500" },
 ];
 
-const TechnicianBoard = () => {
+const SUB_STATUS_BY_STATUS: Record<Status, SubStatus> = {
+  open: "reported",
+  assess: "assessing",
+  waiting: "waiting-parts",
+  doing: "in-progress",
+  done: "closed",
+  qc1: "qc-round1",
+  qc2: "qc-round2",
+  complete: "finished",
+};
+
+const searchIndex = (request: WorkRequest) => {
+  const details = request.request_details;
+  return [
+    request.asset_name,
+    request.issue_summary,
+    request.request_id,
+    request.asset_location,
+    request.reported_by,
+    details?.asset_id,
+    details?.asset_type,
+    details?.machine_number,
+    details?.machine_zone,
+    details?.location_building,
+    details?.location_floor,
+    details?.location_line,
+    details?.issue_message,
+    details?.reporter_name,
+    details?.reporter_department,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+};
+
+export default function TechnicianBoard() {
   const navigate = useNavigate();
   const requests = useRequests();
+  const currentTech = (JSON.parse(sessionStorage.getItem("fixflow_user") ?? "{}") as { emp_id?: string }).emp_id || "TECH001";
   const [search, setSearch] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | WorkRequest["priority"]>("all");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | WorkRequest["category"]>("all");
+  const [responsibleFilter, setResponsibleFilter] = useState<"all" | "mine" | "unassigned">("all");
+  const [subStatusFilter, setSubStatusFilter] = useState<"all" | SubStatus>("all");
+  const [timeSort, setTimeSort] = useState<"reported-desc" | "reported-asc">("reported-desc");
   const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [draggedId, setDraggedId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return requests
-      .filter((r) =>
-        priorityFilter === "all" ? true : r.priority === priorityFilter,
-      )
-      .filter((r) =>
-        search.trim() === ""
+      .filter((request) => (priorityFilter === "all" ? true : request.priority === priorityFilter))
+      .filter((request) => (categoryFilter === "all" ? true : request.category === categoryFilter))
+      .filter((request) =>
+        responsibleFilter === "all"
           ? true
-          : (r.asset_name + r.issue_summary + r.request_id)
-              .toLowerCase()
-              .includes(search.toLowerCase()),
+          : responsibleFilter === "mine"
+          ? request.assigned_to === currentTech
+          : !request.assigned_to,
       )
-      .sort(
-        (a, b) =>
-          PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
-          new Date(a.reported_time).getTime() - new Date(b.reported_time).getTime(),
-      );
-  }, [requests, search, priorityFilter]);
+      .filter((request) => (subStatusFilter === "all" ? true : request.sub_status === subStatusFilter))
+      .filter((request) => (search.trim() === "" ? true : searchIndex(request).includes(search.toLowerCase())))
+      .sort((left, right) => {
+        const timeDiff =
+          timeSort === "reported-desc"
+            ? new Date(right.reported_time).getTime() - new Date(left.reported_time).getTime()
+            : new Date(left.reported_time).getTime() - new Date(right.reported_time).getTime();
+        return timeDiff || PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
+      });
+  }, [requests, search, priorityFilter, categoryFilter, responsibleFilter, subStatusFilter, timeSort, currentTech]);
+
+  const counts = useMemo(() => {
+    const statusCounts = Object.fromEntries(STATUS_COLUMNS.map((column) => [column.key, 0])) as Record<Status, number>;
+    filtered.forEach((request) => {
+      statusCounts[request.status] += 1;
+    });
+    return {
+      critical: filtered.filter((request) => request.priority === "critical").length,
+      assigned: filtered.filter((request) => request.assigned_to === currentTech).length,
+      unassigned: filtered.filter((request) => !request.assigned_to).length,
+      ...statusCounts,
+    };
+  }, [filtered, currentTech]);
 
   const handleAccept = (id: string) => {
-    requestStore.setStatus(id, "doing", "TECH001");
-    toast.success("รับงานสำเร็จ — กำลังเปิดฟอร์มประเมิน");
-    setTimeout(() => navigate(`/assessment/${id}`), 400);
+    requestStore.setStatus(id, "assess", currentTech, {
+      actorName: TECHNICIAN_NAME,
+      note: "ช่างรับงานและเริ่มประเมิน",
+      notifyRequester: true,
+      subStatus: SUB_STATUS_BY_STATUS.assess,
+    });
+    toast.success("รับงานสำเร็จ");
+    setTimeout(() => navigate(`/assessment/${id}`), 350);
   };
 
-  const handleOpen = (id: string) => navigate(`/assessment/${id}`);
+  const handleChangeStatus = (id: string, status: Status, actionLabel: string) => {
+    requestStore.setStatus(id, status, currentTech, {
+      actorName: TECHNICIAN_NAME,
+      note: `อัปเดตเป็น ${STATUS_LABEL[status]} ผ่าน Technician Board`,
+      notifyRequester: true,
+      subStatus: SUB_STATUS_BY_STATUS[status],
+    });
+    toast.success(`อัปเดตสถานะเป็น ${actionLabel}`);
+  };
 
-  const counts = {
-    critical: requests.filter((r) => r.priority === "critical" && r.status === "new").length,
-    new: requests.filter((r) => r.status === "new").length,
-    doing: requests.filter((r) => r.status === "doing").length,
-    waiting: requests.filter((r) => r.status === "waiting").length,
+  const handleDragStart = (requestId: string) => {
+    setDraggedId(requestId);
+  };
+
+  const handleDropToStatus = (status: Status) => {
+    if (!draggedId) return;
+    const request = filtered.find((item) => item.request_id === draggedId);
+    if (!request || request.status === status) {
+      setDraggedId(null);
+      return;
+    }
+    handleChangeStatus(draggedId, status, STATUS_LABEL[status]);
+    setDraggedId(null);
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar */}
       <header className="sticky top-0 z-20 bg-gradient-primary text-primary-foreground shadow-md">
         <div className="container py-3 flex items-center gap-3">
           <div className="h-9 w-9 rounded-md bg-secondary grid place-items-center shrink-0">
             <Wrench className="h-5 w-5 text-secondary-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-xs uppercase tracking-wider text-primary-foreground/70">
-              Technician Board
-            </div>
+            <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Technician Board</div>
             <h1 className="font-bold truncate">สมศักดิ์ ช่างไฟ · TECH001</h1>
           </div>
           <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10 relative">
             <Bell className="h-5 w-5" />
-            {counts.critical > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-priority-critical priority-pulse" />
-            )}
+            {counts.critical > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-priority-critical priority-pulse" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-primary-foreground hover:bg-white/10"
-            onClick={() => navigate("/")}
-            aria-label="ออกจากระบบ"
-          >
+          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/")} aria-label="ออกจากระบบ">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Stats strip */}
-        <div className="container pb-3 grid grid-cols-4 gap-2 text-center">
-          <Stat label="วิกฤติ" value={counts.critical} accent="text-priority-critical bg-white" />
-          <Stat label="งานใหม่" value={counts.new} accent="text-status-new bg-white" />
-          <Stat label="กำลังซ่อม" value={counts.doing} accent="text-status-doing bg-white" />
-          <Stat label="รออะไหล่" value={counts.waiting} accent="text-status-waiting bg-white" />
+        <div className="container pb-3 flex flex-wrap gap-2 overflow-x-auto ">
+          <Stat label="วิกฤติ" value={counts.critical} accent="border-priority-critical/60 bg-priority-critical/25 text-white shadow-lg" />
+          {STATUS_COLUMNS.map((column) => (
+            <Stat
+              key={column.key}
+              label={column.title}
+              value={counts[column.key]}
+              accent={
+                column.key === "open"
+                  ? "border-sky-400/60 bg-sky-600/25 text-white shadow-lg"
+                  : column.key === "assess"
+                  ? "border-amber-400/60 bg-amber-600/25 text-white shadow-lg"
+                  : column.key === "waiting"
+                  ? "border-rose-400/60 bg-rose-600/25 text-white shadow-lg"
+                  : column.key === "doing"
+                  ? "border-cyan-400/60 bg-cyan-600/25 text-white shadow-lg"
+                  : column.key === "done"
+                  ? "border-orange-400/60 bg-orange-600/25 text-white shadow-lg"
+                  : column.key === "qc1"
+                  ? "border-violet-400/60 bg-violet-600/25 text-white shadow-lg"
+                  : column.key === "qc2"
+                  ? "border-fuchsia-400/60 bg-fuchsia-600/25 text-white shadow-lg"
+                  : "border-emerald-400/60 bg-emerald-600/25 text-white shadow-lg"
+              }
+            />
+          ))}
         </div>
       </header>
 
-      {/* Toolbar */}
-      <div className="container py-4 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="ค้นหารหัสงาน, เครื่องจักร, อาการ..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-10 bg-card"
-          />
+      <div className="container py-4 space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="ค้นหารหัสงาน, เครื่องจักร, อาการ..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="pl-9 h-10 bg-card"
+            />
+          </div>
+          <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as "all" | WorkRequest["priority"]) }>
+            <SelectTrigger className="w-[160px] h-10 bg-card">
+              <Filter className="h-4 w-4 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกความสำคัญ</SelectItem>
+              <SelectItem value="critical">🔴 วิกฤติ</SelectItem>
+              <SelectItem value="high">🟠 สูง</SelectItem>
+              <SelectItem value="medium">🔵 ปานกลาง</SelectItem>
+              <SelectItem value="low">⚪ ต่ำ</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as "all" | WorkRequest["category"]) }>
+            <SelectTrigger className="w-[180px] h-10 bg-card">
+              <SelectValue placeholder="ทุกหมวดหมู่" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
+              {Object.entries(CATEGORY_LABEL).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={responsibleFilter} onValueChange={(value) => setResponsibleFilter(value as "all" | "mine" | "unassigned") }>
+            <SelectTrigger className="w-[160px] h-10 bg-card">
+              <SelectValue placeholder="ผู้รับผิดชอบ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกงาน</SelectItem>
+              <SelectItem value="mine">งานของฉัน</SelectItem>
+              <SelectItem value="unassigned">ยังไม่รับงาน</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={subStatusFilter} onValueChange={(value) => setSubStatusFilter(value as "all" | SubStatus) }>
+            <SelectTrigger className="w-[170px] h-10 bg-card">
+              <SelectValue placeholder="สถานะย่อย" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกสถานะย่อย</SelectItem>
+              {Object.entries(SUB_STATUS_LABEL).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={timeSort} onValueChange={(value) => setTimeSort(value as "reported-desc" | "reported-asc") }>
+            <SelectTrigger className="w-[170px] h-10 bg-card">
+              <SelectValue placeholder="เรียงเวลา" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="reported-desc">ใหม่สุดก่อน</SelectItem>
+              <SelectItem value="reported-asc">เก่าสุดก่อน</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="ml-auto inline-flex items-center rounded-md border bg-card p-1">
+            <Button variant={view === "kanban" ? "industrial" : "ghost"} size="sm" onClick={() => setView("kanban") }>
+              <LayoutGrid className="mr-1 h-4 w-4" />
+              Kanban
+            </Button>
+            <Button variant={view === "list" ? "industrial" : "ghost"} size="sm" onClick={() => setView("list") }>
+              <List className="mr-1 h-4 w-4" />
+              List
+            </Button>
+          </div>
         </div>
-        <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as Priority | "all")}>
-          <SelectTrigger className="w-[160px] h-10 bg-card">
-            <Filter className="h-4 w-4 mr-1" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">ทุกความสำคัญ</SelectItem>
-            <SelectItem value="critical">🔴 วิกฤติ</SelectItem>
-            <SelectItem value="high">🟠 สูง</SelectItem>
-            <SelectItem value="medium">🔵 ปานกลาง</SelectItem>
-            <SelectItem value="low">⚪ ต่ำ</SelectItem>
-          </SelectContent>
-        </Select>
-        <Tabs value={view} onValueChange={(v) => setView(v as "kanban" | "list")} className="hidden md:block">
-          <TabsList>
-            <TabsTrigger value="kanban">
-              <LayoutGrid className="h-4 w-4 mr-1" /> Kanban
-            </TabsTrigger>
-            <TabsTrigger value="list">
-              <List className="h-4 w-4 mr-1" /> List
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
 
-      {/* Board */}
-      <main className="container pb-24">
-        {/* Mobile: single list */}
-        <div className="md:hidden space-y-3">
-          {filtered.length === 0 ? (
-            <EmptyState />
-          ) : (
-            filtered.map((r) => (
-              <JobCard key={r.request_id} request={r} onAccept={handleAccept} onOpen={handleOpen} />
-            ))
-          )}
-        </div>
-
-        {/* Desktop kanban */}
         {view === "kanban" ? (
-          <div className="hidden md:grid grid-cols-3 gap-4">
-            {STATUS_COLUMNS.map((col) => {
-              const items = filtered.filter((r) => r.status === col.key);
+          <div className="flex gap-4 overflow-x-auto pb-3">
+            {STATUS_COLUMNS.map((column) => {
+              const columnRequests = filtered.filter((request) => request.status === column.key);
               return (
-                <section
-                  key={col.key}
-                  className={`rounded-lg bg-muted/40 border-t-4 ${col.accent} p-3 min-h-[60vh]`}
+                <Card
+                  key={column.key}
+                  className={cn(
+                    "flex-none w-[20rem] rounded-xl border-t-4 bg-card/80 shadow-sm",
+                    column.accent,
+                  )}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => handleDropToStatus(column.key)}
                 >
-                  <header className="flex items-center justify-between mb-3 px-1">
-                    <h2 className="font-semibold text-sm uppercase tracking-wide">
-                      {col.title}
-                    </h2>
-                    <span className="text-xs font-mono bg-card px-2 py-0.5 rounded border border-border">
-                      {items.length}
-                    </span>
-                  </header>
-                  <div className="space-y-3">
-                    {items.length === 0 ? (
-                      <p className="text-center text-xs text-muted-foreground py-8">
-                        ไม่มีงานในสถานะนี้
-                      </p>
-                    ) : (
-                      items.map((r) => (
-                        <JobCard
-                          key={r.request_id}
-                          request={r}
-                          onAccept={handleAccept}
-                          onOpen={handleOpen}
-                          showAccept={col.key === "new"}
-                        />
-                      ))
-                    )}
+                  <div className="p-3 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-muted-foreground">{STATUS_LABEL[column.key]}</div>
+                        <h2 className="font-semibold">{column.title}</h2>
+                      </div>
+                      <div className="h-8 min-w-8 rounded-full bg-muted px-2 text-sm font-semibold grid place-items-center">
+                        {columnRequests.length}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 min-h-[18rem]">
+                      {columnRequests.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+                          ลากการ์ดมาวางที่คอลัมน์นี้
+                        </div>
+                      ) : (
+                        columnRequests.map((request) => (
+                          <JobCard
+                            key={request.request_id}
+                            request={request}
+                            onOpen={(id) => navigate(`/assessment/${id}`)}
+                            onAccept={handleAccept}
+                            onChangeStatus={handleChangeStatus}
+                            showAccept={column.key === "open"}
+                            showQuickActions={column.key !== "open" && column.key !== "complete"}
+                            draggable
+                            onDragStart={() => handleDragStart(request.request_id)}
+                            onDragEnd={() => setDraggedId(null)}
+                          />
+                        ))
+                      )}
+                    </div>
                   </div>
-                </section>
+                </Card>
               );
             })}
           </div>
         ) : (
-          <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-3">
-            {filtered.map((r) => (
-              <JobCard key={r.request_id} request={r} onAccept={handleAccept} onOpen={handleOpen} />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((request) => (
+              <JobCard
+                key={request.request_id}
+                request={request}
+                onOpen={(id) => navigate(`/assessment/${id}`)}
+                onAccept={handleAccept}
+                onChangeStatus={handleChangeStatus}
+                draggable
+                onDragStart={() => handleDragStart(request.request_id)}
+                onDragEnd={() => setDraggedId(null)}
+              />
             ))}
           </div>
         )}
-      </main>
-    </div>
-  );
-};
-
-function Stat({ label, value, accent }: { label: string; value: number; accent: string }) {
-  return (
-    <div className={`rounded-md py-1.5 px-2 ${accent}`}>
-      <div className="text-xl font-bold leading-tight tabular-nums">{value}</div>
-      <div className="text-[10px] uppercase tracking-wider opacity-80">{label}</div>
+      </div>
     </div>
   );
 }
 
-function EmptyState() {
+function Stat({ label, value, accent }: { label: string; value: number; accent?: string }) {
   return (
-    <div className="text-center py-16 text-muted-foreground">
-      <Wrench className="h-12 w-12 mx-auto mb-3 opacity-30" />
-      <p>ไม่พบงานที่ตรงกับเงื่อนไข</p>
+    <div
+      className={cn(
+        "min-w-[8.5rem] rounded-lg border px-3 py-2 text-xs flex items-center justify-between gap-3 backdrop-blur-sm",
+        accent,
+      )}
+    >
+      <span className="font-medium truncate">{label}</span>
+      <span className="text-base font-semibold tabular-nums">{value}</span>
     </div>
   );
 }
-
-export default TechnicianBoard;
