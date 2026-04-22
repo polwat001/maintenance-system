@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CMMS Industrial Design System — All colors HSL */
+
+@layer base {
+  :root {
+    --background: 210 20% 97%;
+    --foreground: 215 28% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+
+    /* Industrial steel blue */
+    --primary: 215 60% 22%;
+    --primary-foreground: 40 95% 96%;
+    --primary-glow: 210 70% 45%;
+
+    /* Safety amber */
+    --secondary: 38 92% 50%;
+    --secondary-foreground: 215 60% 15%;
+
+    --muted: 215 16% 93%;
+    --muted-foreground: 215 14% 42%;
+
+    --accent: 188 85% 38%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 78% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 65% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 32 95% 50%;
+    --warning-foreground: 215 60% 15%;
+
+    --border: 215 18% 87%;
+    --input: 215 18% 87%;
+    --ring: 215 60% 22%;
+
+    --radius: 0.625rem;
+
+    /* Priority palette */
+    --priority-critical: 0 78% 48%;
+    --priority-high: 25 95% 53%;
+    --priority-medium: 210 85% 50%;
+    --priority-low: 215 14% 55%;
+
+    /* Status */
+    --status-new: 210 85% 50%;
+    --status-doing: 38 92% 50%;
+    --status-waiting: 270 60% 55%;
+    --status-done: 142 65% 38%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(215 60% 22%), hsl(210 70% 35%));
+    --gradient-hero: linear-gradient(120deg, hsl(215 60% 18%) 0%, hsl(210 70% 30%) 60%, hsl(188 85% 35%) 100%);
+    --gradient-amber: linear-gradient(135deg, hsl(38 92% 50%), hsl(25 95% 53%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(215 20% 98%));
+
+    /* Shadows */
+    --shadow-card: 0 1px 3px hsl(215 28% 17% / 0.06), 0 4px 16px -4px hsl(215 28% 17% / 0.08);
+    --shadow-elevated: 0 8px 32px -8px hsl(215 60% 22% / 0.18);
+    --shadow-glow: 0 0 32px hsl(38 92% 50% / 0.35);
+
+    --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 215 60% 22%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 215 60% 15%;
+    --sidebar-accent: 215 50% 28%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 215 50% 28%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  .dark {
+    --background: 215 35% 9%;
+    --foreground: 210 20% 95%;
+    --card: 215 32% 12%;
+    --card-foreground: 210 20% 95%;
+    --popover: 215 32% 12%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 215 60% 15%;
+    --secondary: 215 28% 18%;
+    --secondary-foreground: 210 20% 95%;
+    --muted: 215 28% 16%;
+    --muted-foreground: 215 14% 65%;
+    --accent: 188 85% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 78% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 28% 20%;
+    --input: 215 28% 20%;
+    --ring: 38 92% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Sarabun', 'IBM Plex Sans Thai', system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Barlow Condensed', 'Sarabun', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .industrial-stripe {
+    background-image: repeating-linear-gradient(
+      45deg,
+      hsl(var(--secondary) / 0.15),
+      hsl(var(--secondary) / 0.15) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  }
+
+  .priority-pulse {
+    animation: priority-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes priority-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--priority-critical) / 0.5); }
+    50% { box-shadow: 0 0 0 8px hsl(var(--priority-critical) / 0); }
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s var(--transition-smooth) both;
+  }
+}
