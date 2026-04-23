@@ -347,3 +347,37 @@ export const PRIORITY_RANK: Record<Priority, number> = {
   medium: 2,
   low: 3,
 };
+
+export interface Technician {
+  technician_id: string;
+  name: string;
+  department: string;
+}
+
+export const TECHNICIAN_MAP: Record<string, Technician> = {
+  TECH001: {
+    technician_id: "TECH001",
+    name: "สมศักดิ์ ช่างไฟ",
+    department: "ฝ่ายซ่อมบำรุง",
+  },
+  TECH002: {
+    technician_id: "TECH002",
+    name: "วิษณุ ช่างกล",
+    department: "ฝ่ายซ่อมบำรุง",
+  },
+  TECH003: {
+    technician_id: "TECH003",
+    name: "สุรพล ช่างประปา",
+    department: "ฝ่ายซ่อมบำรุง",
+  },
+};
+
+export function getTechnicianName(technicianId: string | null | undefined): string {
+  if (!technicianId) return "-";
+  return TECHNICIAN_MAP[technicianId]?.name || technicianId;
+}
+
+export function getTechnicianDepartment(technicianId: string | null | undefined): string {
+  if (!technicianId) return "-";
+  return TECHNICIAN_MAP[technicianId]?.department || "-";
+}

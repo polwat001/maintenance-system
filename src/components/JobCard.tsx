@@ -2,8 +2,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PriorityBadge } from "./PriorityBadge";
 import { StatusBadge } from "./StatusBadge";
-import { CATEGORY_LABEL, Status, timeAgo, WorkRequest } from "@/lib/mockData";
+import { CATEGORY_LABEL, Status, timeAgo, WorkRequest, getTechnicianName, getTechnicianDepartment } from "@/lib/mockData";
 import { Clock, MapPin, User, Zap, Wrench, Building2, Droplets, Cpu, Paperclip, Gauge, Waves, CircleHelp } from "lucide-react";
+import { useState } from "react";
 
 const CATEGORY_ICON = {
   "electrical-control": Zap,
@@ -42,6 +43,7 @@ export function JobCard({
 }: Props) {
   const Icon = CATEGORY_ICON[request.category];
   const isCritical = request.priority === "critical";
+  const [isExpanded, setIsExpanded] = useState(false);
   const details = request.request_details;
   const thumbnail = request.attachments.find((attachment) =>
     attachment.mime_type ? attachment.mime_type.startsWith("image/") : attachment.url.startsWith("data:image"),
@@ -120,7 +122,7 @@ export function JobCard({
 
         {/* Body */}
         <div className="space-y-1.5 text-sm">
-          {thumbnail && (
+          {thumbnail && isExpanded && (
             <img
               src={thumbnail}
               alt={`แนบรูป ${request.request_id}`}
@@ -131,7 +133,7 @@ export function JobCard({
             <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
             <span className="line-clamp-1">{request.asset_location}</span>
           </div>
-          <p className="text-foreground/90 line-clamp-2 leading-snug">
+          <p className={`text-foreground/90 leading-snug ${isExpanded ? "line-clamp-none" : "line-clamp-2"}`}>
             {request.issue_summary}
           </p>
           {request.attachments.length > 0 && (
@@ -141,24 +143,48 @@ export function JobCard({
             </div>
           )}
 
-          <div className="space-y-2 pt-1">
-            <DetailMiniGroup title="ข้อมูลเครื่อง">
-              <DetailLine label="รหัส/เครื่อง" value={`${machineCode} · ${machineNumber}`} />
-              <DetailLine label="โซน" value={machineZone} />
-            </DetailMiniGroup>
+          {isExpanded && (
+            <div className="space-y-2 pt-1">
+              <DetailMiniGroup title="ข้อมูลเครื่อง">
+                <DetailLine label="รหัส/เครื่อง" value={`${machineCode} · ${machineNumber}`} />
+                <DetailLine label="โซน" value={machineZone} />
+              </DetailMiniGroup>
 
-            <DetailMiniGroup title="ข้อมูลผู้แจ้ง">
-              <DetailLine label="ผู้แจ้ง" value={reporterName} />
-              <DetailLine label="หน่วยงาน" value={reporterDepartment} />
-            </DetailMiniGroup>
+              <DetailMiniGroup title="ข้อมูลผู้แจ้ง">
+                <DetailLine label="ผู้แจ้ง" value={reporterName} />
+                <DetailLine label="หน่วยงาน" value={reporterDepartment} />
+              </DetailMiniGroup>
 
-            <DetailMiniGroup title="รายละเอียดอาการ">
-              <DetailLine label="ข้อความ" value={issueText} />
-              <DetailLine label="อาการ" value={symptomLabel} />
-              <DetailLine label="ความถี่" value={frequencyLabel} />
-              <DetailLine label="สภาพ" value={operabilityLabel} />
-            </DetailMiniGroup>
-          </div>
+              {request.assigned_to && request.status !== "open" && (
+                <DetailMiniGroup title="ข้อมูลช่างผู้รับงาน">
+                  <DetailLine label="ช่าง" value={getTechnicianName(request.assigned_to)} />
+                  <DetailLine label="หน่วยงาน" value={getTechnicianDepartment(request.assigned_to)} />
+                </DetailMiniGroup>
+              )}
+
+              <DetailMiniGroup title="รายละเอียดอาการ">
+                <DetailLine label="ข้อความ" value={issueText} />
+                <DetailLine label="อาการ" value={symptomLabel} />
+                <DetailLine label="ความถี่" value={frequencyLabel} />
+                <DetailLine label="สภาพ" value={operabilityLabel} />
+              </DetailMiniGroup>
+            </div>
+          )}
+        </div>
+
+        <div className="pt-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-[11px]"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded((prev) => !prev);
+            }}
+          >
+            {isExpanded ? "ซ่อนรายละเอียด" : "ดูรายละเอียด"}
+          </Button>
         </div>
 
         {/* Meta */}
@@ -172,6 +198,14 @@ export function JobCard({
             <span className="truncate">{request.reported_by}</span>
           </div>
         </div>
+
+        {/* Assigned Technician */}
+        {request.assigned_to && request.status !== "open" && (
+          <div className="flex items-center justify-between text-xs text-foreground/70 pt-1.5 pb-1.5 px-2.5 rounded-md bg-muted/40 border border-border/40">
+            <span className="font-medium">รับงานโดย:</span>
+            <span className="font-semibold text-foreground truncate">{getTechnicianName(request.assigned_to)}</span>
+          </div>
+        )}
 
         {/* Action */}
         <div className="flex items-center justify-between gap-2 pt-1">
@@ -194,7 +228,7 @@ export function JobCard({
           )}
         </div>
 
-        {showQuickActions && request.status !== "open" && request.status !== "complete" && (
+        {showQuickActions && request.status !== "open" && request.status !== "complete" && isExpanded && (
           <div className="grid grid-cols-3 gap-1">
             <Button
               size="sm"

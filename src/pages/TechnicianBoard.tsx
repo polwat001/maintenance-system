@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Filter, LayoutGrid, List, LogOut, Search, Wrench } from "lucide-react";
 import { toast } from "sonner";
@@ -70,6 +70,10 @@ const searchIndex = (request: WorkRequest) => {
 export default function TechnicianBoard() {
   const navigate = useNavigate();
   const requests = useRequests();
+  const kanbanScrollRef = useRef<HTMLDivElement | null>(null);
+  const isPanningRef = useRef(false);
+  const panStartXRef = useRef(0);
+  const panStartScrollLeftRef = useRef(0);
   const currentTech = (JSON.parse(sessionStorage.getItem("fixflow_user") ?? "{}") as { emp_id?: string }).emp_id || "TECH001";
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"all" | WorkRequest["priority"]>("all");
@@ -94,11 +98,12 @@ export default function TechnicianBoard() {
       .filter((request) => (subStatusFilter === "all" ? true : request.sub_status === subStatusFilter))
       .filter((request) => (search.trim() === "" ? true : searchIndex(request).includes(search.toLowerCase())))
       .sort((left, right) => {
-        const timeDiff =
-          timeSort === "reported-desc"
-            ? new Date(right.reported_time).getTime() - new Date(left.reported_time).getTime()
-            : new Date(left.reported_time).getTime() - new Date(right.reported_time).getTime();
-        return timeDiff || PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
+        const priorityDiff = PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+
+        return timeSort === "reported-desc"
+          ? new Date(right.reported_time).getTime() - new Date(left.reported_time).getTime()
+          : new Date(left.reported_time).getTime() - new Date(right.reported_time).getTime();
       });
   }, [requests, search, priorityFilter, categoryFilter, responsibleFilter, subStatusFilter, timeSort, currentTech]);
 
@@ -140,6 +145,62 @@ export default function TechnicianBoard() {
     setDraggedId(requestId);
   };
 
+  const handleDragEnd = () => {
+    setDraggedId(null);
+  };
+
+  const autoScrollKanbanByPointer = (clientX: number) => {
+    if (!draggedId || !kanbanScrollRef.current) return;
+
+    const container = kanbanScrollRef.current;
+    const rect = container.getBoundingClientRect();
+    const edgeThreshold = 96;
+    const maxScrollStep = 26;
+
+    let scrollDelta = 0;
+    if (clientX < rect.left + edgeThreshold) {
+      const ratio = Math.min(1, (rect.left + edgeThreshold - clientX) / edgeThreshold);
+      scrollDelta = -Math.ceil(maxScrollStep * ratio);
+    } else if (clientX > rect.right - edgeThreshold) {
+      const ratio = Math.min(1, (clientX - (rect.right - edgeThreshold)) / edgeThreshold);
+      scrollDelta = Math.ceil(maxScrollStep * ratio);
+    }
+
+    if (scrollDelta !== 0) {
+      container.scrollLeft += scrollDelta;
+    }
+  };
+
+  const handleKanbanDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    autoScrollKanbanByPointer(event.clientX);
+  };
+
+  const handleKanbanMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || !kanbanScrollRef.current) return;
+
+    const target = event.target as HTMLElement;
+    if (target.closest("button, input, textarea, select, a, [role='button'], [draggable='true']")) return;
+
+    isPanningRef.current = true;
+    panStartXRef.current = event.clientX;
+    panStartScrollLeftRef.current = kanbanScrollRef.current.scrollLeft;
+    kanbanScrollRef.current.classList.add("cursor-grabbing");
+    event.preventDefault();
+  };
+
+  const handleKanbanMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isPanningRef.current || !kanbanScrollRef.current) return;
+    const deltaX = event.clientX - panStartXRef.current;
+    kanbanScrollRef.current.scrollLeft = panStartScrollLeftRef.current - deltaX;
+  };
+
+  const handleKanbanMouseUp = () => {
+    if (!isPanningRef.current || !kanbanScrollRef.current) return;
+    isPanningRef.current = false;
+    kanbanScrollRef.current.classList.remove("cursor-grabbing");
+  };
+
   const handleDropToStatus = (status: Status) => {
     if (!draggedId) return;
     const request = filtered.find((item) => item.request_id === draggedId);
@@ -171,7 +232,7 @@ export default function TechnicianBoard() {
           </Button>
         </div>
 
-        <div className="container pb-3 flex flex-wrap gap-2 overflow-x-auto ">
+        {/* <div className="container pb-3 flex flex-wrap gap-2 overflow-x-auto ">
           <Stat label="วิกฤติ" value={counts.critical} accent="border-priority-critical/60 bg-priority-critical/25 text-white shadow-lg" />
           {STATUS_COLUMNS.map((column) => (
             <Stat
@@ -197,7 +258,7 @@ export default function TechnicianBoard() {
               }
             />
           ))}
-        </div>
+        </div> */}
       </header>
 
       <div className="container py-4 space-y-4">
@@ -282,7 +343,15 @@ export default function TechnicianBoard() {
         </div>
 
         {view === "kanban" ? (
-          <div className="flex gap-4 overflow-x-auto pb-3">
+          <div
+            ref={kanbanScrollRef}
+            className="flex gap-4 overflow-x-auto pb-3 cursor-grab"
+            onDragOver={handleKanbanDragOver}
+            onMouseDown={handleKanbanMouseDown}
+            onMouseMove={handleKanbanMouseMove}
+            onMouseUp={handleKanbanMouseUp}
+            onMouseLeave={handleKanbanMouseUp}
+          >
             {STATUS_COLUMNS.map((column) => {
               const columnRequests = filtered.filter((request) => request.status === column.key);
               return (
@@ -292,7 +361,7 @@ export default function TechnicianBoard() {
                     "flex-none w-[20rem] rounded-xl border-t-4 bg-card/80 shadow-sm",
                     column.accent,
                   )}
-                  onDragOver={(event) => event.preventDefault()}
+                  onDragOver={handleKanbanDragOver}
                   onDrop={() => handleDropToStatus(column.key)}
                 >
                   <div className="p-3 space-y-3">
@@ -323,7 +392,7 @@ export default function TechnicianBoard() {
                             showQuickActions={column.key !== "open" && column.key !== "complete"}
                             draggable
                             onDragStart={() => handleDragStart(request.request_id)}
-                            onDragEnd={() => setDraggedId(null)}
+                            onDragEnd={handleDragEnd}
                           />
                         ))
                       )}
@@ -344,7 +413,7 @@ export default function TechnicianBoard() {
                 onChangeStatus={handleChangeStatus}
                 draggable
                 onDragStart={() => handleDragStart(request.request_id)}
-                onDragEnd={() => setDraggedId(null)}
+                onDragEnd={handleDragEnd}
               />
             ))}
           </div>
