@@ -39,6 +39,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import jsQR from "jsqr";
 import { toast } from "sonner";
 
 const CATEGORIES: { value: WorkRequest["category"]; label: string; icon: typeof Zap }[] = [
@@ -129,6 +130,12 @@ type QRDetector = {
   detect: (input: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
 };
 
+type LegacyGetUserMedia = (
+  constraints: MediaStreamConstraints,
+  onSuccess: (stream: MediaStream) => void,
+  onError: (error: DOMException) => void,
+) => void;
+
 type SymptomType = RequestDetails["issue_symptom"];
 type FrequencyType = RequestDetails["issue_frequency"];
 type OperabilityType = RequestDetails["machine_operability"];
@@ -145,6 +152,7 @@ const RequestForm = () => {
   const currentUserId = currentUser.emp_id || "REQ042";
   const currentDepartment = currentUser.department || "ฝ่ายผลิต";
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const qrImageInputRef = useRef<HTMLInputElement>(null);
   const toastedNotificationIdsRef = useRef<Set<string>>(new Set());
 
   const [assetId, setAssetId] = useState("");
@@ -173,7 +181,12 @@ const RequestForm = () => {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [imageScanLoading, setImageScanLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const detectorRef = useRef<QRDetector | null>(null);
@@ -315,6 +328,60 @@ const RequestForm = () => {
     setAttachments((prev) => prev.filter((attachment) => attachment.attachment_id !== attachmentId));
   };
 
+  const handlePickQrImage = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+
+    setImageScanLoading(true);
+    try {
+      const imageUrl = await toDataUrl(file);
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("IMAGE_LOAD_FAILED"));
+        img.src = imageUrl;
+      });
+
+      const tryScales = [1, 0.75, 0.5, 0.33];
+      let decodedValue = "";
+
+      for (const scale of tryScales) {
+        const width = Math.max(1, Math.floor(image.naturalWidth * scale));
+        const height = Math.max(1, Math.floor(image.naturalHeight * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) continue;
+
+        context.drawImage(image, 0, 0, width, height);
+        const imageData = context.getImageData(0, 0, width, height);
+        const decoded = jsQR(imageData.data, width, height, {
+          inversionAttempts: "attemptBoth",
+        });
+
+        if (decoded?.data) {
+          decodedValue = decoded.data.trim();
+          break;
+        }
+      }
+
+      if (!decodedValue) {
+        toast.error("ไม่พบ QR Code ในรูปภาพที่เลือก");
+        return;
+      }
+
+      applyScanResult(decodedValue);
+    } catch {
+      toast.error("ไม่สามารถอ่านรูปภาพเพื่อสแกน QR ได้");
+    } finally {
+      setImageScanLoading(false);
+      if (qrImageInputRef.current) {
+        qrImageInputRef.current.value = "";
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -379,7 +446,8 @@ const RequestForm = () => {
   const applyScanResult = (qrValue: string) => {
     const selected = QR_ASSET_CATALOG.find((item) => item.qr_code === qrValue);
     if (!selected) {
-      toast.error(`ไม่พบข้อมูลอุปกรณ์สำหรับ QR: ${qrValue}`);
+      setQrManualInput(qrValue);
+      toast.error(`สแกน QR ได้แล้ว แต่ยังไม่พบข้อมูลอุปกรณ์สำหรับ: ${qrValue}`);
       return;
     }
 
@@ -406,10 +474,16 @@ const RequestForm = () => {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.srcObject = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    detectorRef.current = null;
     setCameraReady(false);
   };
 
@@ -417,24 +491,51 @@ const RequestForm = () => {
     const detector = detectorRef.current;
     const video = videoRef.current;
 
-    if (!detector || !video || video.readyState < 2) {
+    if (!video || video.readyState < 2) {
       rafRef.current = requestAnimationFrame(() => {
         void scanFrame();
       });
       return;
     }
 
+    let rawValue: string | undefined;
+
     try {
-      const codes = await detector.detect(video);
-      const raw = codes.find((code) => !!code.rawValue)?.rawValue;
-      if (raw) {
-        applyScanResult(raw);
-        setCameraOpen(false);
-        stopCamera();
-        return;
+      if (detector) {
+        const codes = await detector.detect(video);
+        rawValue = codes.find((code) => !!code.rawValue)?.rawValue;
       }
     } catch {
       // Ignore frame-level decode errors and continue scanning.
+    }
+
+    if (!rawValue) {
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      if (width > 0 && height > 0) {
+        const canvas = canvasRef.current ?? document.createElement("canvas");
+        canvasRef.current = canvas;
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (context) {
+          context.drawImage(video, 0, 0, width, height);
+          const imageData = context.getImageData(0, 0, width, height);
+          const decoded = jsQR(imageData.data, width, height, {
+            inversionAttempts: "attemptBoth",
+          });
+          rawValue = decoded?.data;
+        }
+      }
+    }
+
+    if (rawValue) {
+      applyScanResult(rawValue.trim());
+      setCameraOpen(false);
+      stopCamera();
+      return;
     }
 
     rafRef.current = requestAnimationFrame(() => {
@@ -442,26 +543,98 @@ const RequestForm = () => {
     });
   };
 
-  const openCameraScanner = async () => {
-    setCameraError("");
+  const refreshCameraDevices = async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((device) => device.kind === "videoinput");
+      setCameraDevices(videoInputs);
+      setSelectedCameraId((prev) => {
+        if (prev && videoInputs.some((device) => device.deviceId === prev)) {
+          return prev;
+        }
+        return videoInputs[0]?.deviceId ?? "";
+      });
+    } catch {
+      // Ignore enumerate failure and keep current camera list.
+    }
+  };
 
-    const DetectorCtor = (window as Window & {
-      BarcodeDetector?: new (options: { formats: string[] }) => QRDetector;
-    }).BarcodeDetector;
-    if (!DetectorCtor) {
-      setCameraError("อุปกรณ์/เบราว์เซอร์นี้ยังไม่รองรับ QR scanner ในตัว");
+  const openCameraScanner = async (preferredCameraId?: string) => {
+    stopCamera();
+    setCameraError("");
+    setCameraLoading(true);
+
+    const isSecure =
+      window.isSecureContext ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+
+    if (!isSecure) {
+      setCameraError("ต้องเปิดผ่าน HTTPS หรือ localhost จึงจะใช้กล้องได้");
       setCameraOpen(true);
       return;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-      });
+    const legacyGetUserMedia =
+      navigator.getUserMedia ||
+      (navigator as Navigator & { webkitGetUserMedia?: LegacyGetUserMedia }).webkitGetUserMedia ||
+      (navigator as Navigator & { mozGetUserMedia?: LegacyGetUserMedia }).mozGetUserMedia ||
+      (navigator as Navigator & { msGetUserMedia?: LegacyGetUserMedia }).msGetUserMedia;
 
-      detectorRef.current = new DetectorCtor({ formats: ["qr_code"] });
+    const getStream = (constraints: MediaStreamConstraints) => {
+      if (navigator.mediaDevices?.getUserMedia) {
+        return navigator.mediaDevices.getUserMedia(constraints);
+      }
+      if (legacyGetUserMedia) {
+        return new Promise<MediaStream>((resolve, reject) => {
+          legacyGetUserMedia(
+            constraints,
+            (stream) => resolve(stream),
+            (error) => reject(error),
+          );
+        });
+      }
+      return Promise.reject(new Error("GET_USER_MEDIA_NOT_SUPPORTED"));
+    };
+
+    if (!navigator.mediaDevices?.getUserMedia && !legacyGetUserMedia) {
+      setCameraError("เบราว์เซอร์นี้ไม่รองรับการเข้าถึงกล้อง");
+      setCameraOpen(true);
+      return;
+    }
+
+    const DetectorCtor = (window as Window & {
+      BarcodeDetector?: new (options: { formats: string[] }) => QRDetector;
+    }).BarcodeDetector;
+
+    try {
+      let stream: MediaStream;
+      try {
+        const preferredConstraints = preferredCameraId
+          ? { deviceId: { exact: preferredCameraId } }
+          : { facingMode: { ideal: "environment" } };
+
+        stream = await getStream({
+          video: preferredConstraints,
+        });
+      } catch {
+        // Fallback for devices/browsers that cannot satisfy facingMode constraint.
+        stream = await getStream({ video: true });
+      }
+
+      detectorRef.current = DetectorCtor
+        ? new DetectorCtor({ formats: ["qr_code"] })
+        : null;
       streamRef.current = stream;
       setCameraOpen(true);
+      void refreshCameraDevices();
+
+      const activeTrack = stream.getVideoTracks()[0];
+      const activeDeviceId = activeTrack?.getSettings().deviceId;
+      if (activeDeviceId) {
+        setSelectedCameraId(activeDeviceId);
+      }
 
       setTimeout(() => {
         const video = videoRef.current;
@@ -471,10 +644,26 @@ const RequestForm = () => {
         setCameraReady(true);
         void scanFrame();
       }, 0);
-    } catch {
-      setCameraError("ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์กล้อง");
+    } catch (error) {
+      const domError = error as DOMException | undefined;
+      if (domError?.name === "NotAllowedError" || domError?.name === "PermissionDeniedError") {
+        setCameraError("ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์กล้องในเบราว์เซอร์");
+      } else if (domError?.name === "NotFoundError") {
+        setCameraError("ไม่พบอุปกรณ์กล้องบนเครื่องนี้");
+      } else if (domError?.name === "NotReadableError") {
+        setCameraError("กล้องกำลังถูกใช้งานโดยแอปอื่น กรุณาปิดแอปนั้นแล้วลองใหม่");
+      } else {
+        setCameraError("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบสิทธิ์และการเชื่อมต่อกล้อง");
+      }
       setCameraOpen(true);
+    } finally {
+      setCameraLoading(false);
     }
+  };
+
+  const handleCameraSelection = (deviceId: string) => {
+    setSelectedCameraId(deviceId);
+    void openCameraScanner(deviceId);
   };
 
   useEffect(() => {
@@ -586,10 +775,34 @@ const RequestForm = () => {
                 )}
               </div>
               <div className="flex justify-end">
-                <Button type="button" variant="outline" size="sm" onClick={() => void openCameraScanner()}>
-                  <Camera className="h-4 w-4 mr-1" />
-                  เปิดกล้องสแกน QR
-                </Button>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={qrImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => void handlePickQrImage(e.target.files)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={imageScanLoading}
+                    onClick={() => qrImageInputRef.current?.click()}
+                  >
+                    <ImagePlus className="h-4 w-4 mr-1" />
+                    {imageScanLoading ? "กำลังสแกนรูป..." : "เลือกรูปสแกน QR"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void openCameraScanner()}
+                  >
+                    <Camera className="h-4 w-4 mr-1" />
+                    เปิดกล้องสแกน QR
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
                 <span className="text-xs text-muted-foreground">ไม่สะดวกสแกน? เปิดโหมดกรอกข้อมูลเครื่องจักรเอง</span>
@@ -1058,6 +1271,25 @@ const RequestForm = () => {
           </DialogHeader>
 
           <div className="space-y-3">
+            {cameraDevices.length > 1 && (
+              <div className="space-y-1">
+                <Label htmlFor="camera_select" className="text-xs">เลือกกล้องสำหรับสแกน</Label>
+                <select
+                  id="camera_select"
+                  value={selectedCameraId}
+                  onChange={(e) => handleCameraSelection(e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  disabled={cameraLoading}
+                >
+                  {cameraDevices.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `กล้อง ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {cameraError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {cameraError}
@@ -1070,7 +1302,11 @@ const RequestForm = () => {
 
             {!cameraError && (
               <p className="text-xs text-muted-foreground">
-                {cameraReady ? "หันกล้องไปที่ QR Code เพื่อสแกนอัตโนมัติ" : "กำลังเริ่มกล้อง..."}
+                {cameraLoading
+                  ? "กำลังเปลี่ยน/เริ่มกล้อง..."
+                  : cameraReady
+                    ? "หันกล้องไปที่ QR Code เพื่อสแกนอัตโนมัติ"
+                    : "กำลังเริ่มกล้อง..."}
               </p>
             )}
 
