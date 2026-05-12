@@ -673,10 +673,10 @@ const RequestForm = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-16 ">
       {/* Top bar */}
       <header className="sticky top-0 z-20 bg-gradient-primary text-primary-foreground shadow-md">
-        <div className="container py-3 flex items-center gap-3">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
           <div className="h-9 w-9 rounded-md bg-secondary grid place-items-center shrink-0">
             <ClipboardList className="h-5 w-5 text-secondary-foreground" />
           </div>
@@ -726,7 +726,7 @@ const RequestForm = () => {
         </div>
       </header>
 
-      <main className="container pt-6 grid lg:grid-cols-[1fr_380px] gap-6">
+      <main className="w-full px-4 sm:px-6 lg:px-8 pt-6 grid  gap-0">
         {/* Form */}
         <Card className="p-5 sm:p-6 bg-gradient-card shadow-card animate-slide-up">
           <header className="flex items-center gap-2 mb-5 pb-4 border-b">
@@ -1191,17 +1191,6 @@ const RequestForm = () => {
             </div>
           </form>
         </Card>
-
-        <aside className="space-y-3 lg:sticky lg:top-24 lg:self-start">
-          <header className="flex items-center justify-end gap-2">
-            {unreadCount > 0 && (
-              <span className="text-[10px] font-semibold bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                แจ้งเตือนใหม่ {unreadCount}
-              </span>
-            )}
-            <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{myRequests.length}</span>
-          </header>
-        </aside>
       </main>
 
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>

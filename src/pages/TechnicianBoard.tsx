@@ -231,34 +231,6 @@ export default function TechnicianBoard() {
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
-
-        {/* <div className="container pb-3 flex flex-wrap gap-2 overflow-x-auto ">
-          <Stat label="วิกฤติ" value={counts.critical} accent="border-priority-critical/60 bg-priority-critical/25 text-white shadow-lg" />
-          {STATUS_COLUMNS.map((column) => (
-            <Stat
-              key={column.key}
-              label={column.title}
-              value={counts[column.key]}
-              accent={
-                column.key === "open"
-                  ? "border-sky-400/60 bg-sky-600/25 text-white shadow-lg"
-                  : column.key === "assess"
-                  ? "border-amber-400/60 bg-amber-600/25 text-white shadow-lg"
-                  : column.key === "waiting"
-                  ? "border-rose-400/60 bg-rose-600/25 text-white shadow-lg"
-                  : column.key === "doing"
-                  ? "border-cyan-400/60 bg-cyan-600/25 text-white shadow-lg"
-                  : column.key === "done"
-                  ? "border-orange-400/60 bg-orange-600/25 text-white shadow-lg"
-                  : column.key === "qc1"
-                  ? "border-violet-400/60 bg-violet-600/25 text-white shadow-lg"
-                  : column.key === "qc2"
-                  ? "border-fuchsia-400/60 bg-fuchsia-600/25 text-white shadow-lg"
-                  : "border-emerald-400/60 bg-emerald-600/25 text-white shadow-lg"
-              }
-            />
-          ))}
-        </div> */}
       </header>
 
       <div className="container py-4 space-y-4">
