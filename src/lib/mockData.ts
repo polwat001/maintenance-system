@@ -1244,7 +1244,7 @@ export const MOCK_QC_SCHEDULES: QCSchedule[] = [
 
 // ─── User Approval Request ────────────────────────────────────────────────────
 
-export type UserRole = "technician" | "qc" | "admin" | "executive" | "requester";
+export type UserRole = "technician" | "qc" | "admin" | "executive" | "requester" | "superadmin";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 export interface UserApprovalRequest {
@@ -1268,6 +1268,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   admin: "ผู้ดูแลระบบ",
   executive: "ผู้บริหาร",
   requester: "ผู้แจ้งซ่อม",
+  superadmin: "Superadmin",
 };
 
 export const MOCK_USER_APPROVAL_REQUESTS: UserApprovalRequest[] = [
@@ -1696,5 +1697,363 @@ export const MOCK_QC_MATRIX_RECORDS: Record<string, QCMatrixRecordData> = {
       status: "pending",
     },
   },
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ─── System Users (Superadmin User Management) ───────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+export type UserStatus = "active" | "inactive" | "suspended";
+
+export interface SystemUser {
+  user_id: string;
+  emp_id: string;
+  name: string;
+  username: string;
+  department: string;
+  position: string;
+  role: UserRole;
+  status: UserStatus;
+  email: string;
+  phone: string;
+  created_at: string;
+  last_login: string;
+  skills?: string[];
+}
+
+export const USER_STATUS_LABEL: Record<UserStatus, string> = {
+  active: "ใช้งาน",
+  inactive: "ไม่ได้ใช้งาน",
+  suspended: "ระงับ",
+};
+
+export const MOCK_SYSTEM_USERS: SystemUser[] = [
+  {
+    user_id: "USR-001",
+    emp_id: "SA001",
+    name: "ระบบ Superadmin",
+    username: "superadmin",
+    department: "IT",
+    position: "System Administrator",
+    role: "superadmin",
+    status: "active",
+    email: "superadmin@fixflow.co.th",
+    phone: "081-000-0000",
+    created_at: "2026-01-01T00:00:00.000Z",
+    last_login: _d(0.1),
+  },
+  {
+    user_id: "USR-002",
+    emp_id: "TECH001",
+    name: "สมศักดิ์ ช่างไฟ",
+    username: "somsak.t",
+    department: "Maintenance",
+    position: "ช่างไฟฟ้า",
+    role: "technician",
+    status: "active",
+    email: "somsak.t@fixflow.co.th",
+    phone: "081-111-1111",
+    created_at: "2026-02-15T08:00:00.000Z",
+    last_login: _d(0.2),
+    skills: ["electrical", "facility"],
+  },
+  {
+    user_id: "USR-003",
+    emp_id: "TECH002",
+    name: "ชาญชัย เครื่องกล",
+    username: "chanchai.k",
+    department: "Maintenance",
+    position: "ช่างกล",
+    role: "technician",
+    status: "active",
+    email: "chanchai.k@fixflow.co.th",
+    phone: "081-222-2222",
+    created_at: "2026-02-20T08:00:00.000Z",
+    last_login: _d(0.5),
+    skills: ["mechanical", "pneumatic-hydraulic"],
+  },
+  {
+    user_id: "USR-004",
+    emp_id: "TECH003",
+    name: "วิชัย หล่อลื่น",
+    username: "wichai.l",
+    department: "Maintenance",
+    position: "ช่างหล่อลื่น",
+    role: "technician",
+    status: "active",
+    email: "wichai.l@fixflow.co.th",
+    phone: "081-333-3333",
+    created_at: "2026-03-01T08:00:00.000Z",
+    last_login: _d(1),
+    skills: ["lubrication-fluid", "mechanical"],
+  },
+  {
+    user_id: "USR-005",
+    emp_id: "REQ042",
+    name: "นภดล ฝ่ายผลิต",
+    username: "nophon.r",
+    department: "ฝ่ายผลิต",
+    position: "พนักงานผลิต",
+    role: "requester",
+    status: "active",
+    email: "nophon.r@fixflow.co.th",
+    phone: "081-444-4444",
+    created_at: "2026-03-10T08:00:00.000Z",
+    last_login: _d(0.3),
+  },
+  {
+    user_id: "USR-006",
+    emp_id: "ADMIN001",
+    name: "ผู้จัดการฝ่ายซ่อมบำรุง",
+    username: "admin",
+    department: "Management",
+    position: "ผู้จัดการฝ่าย",
+    role: "admin",
+    status: "active",
+    email: "admin@fixflow.co.th",
+    phone: "081-555-5555",
+    created_at: "2026-01-15T08:00:00.000Z",
+    last_login: _d(0.1),
+  },
+  {
+    user_id: "USR-007",
+    emp_id: "QC001",
+    name: "ณัฐพงศ์ QC",
+    username: "qc",
+    department: "ฝ่ายควบคุมคุณภาพ",
+    position: "หัวหน้า QC",
+    role: "qc",
+    status: "active",
+    email: "natthapong.qc@fixflow.co.th",
+    phone: "081-666-6666",
+    created_at: "2026-01-20T08:00:00.000Z",
+    last_login: _d(0.4),
+  },
+  {
+    user_id: "USR-008",
+    emp_id: "EXEC001",
+    name: "ผู้บริหาร",
+    username: "executive",
+    department: "Executive",
+    position: "ผู้อำนวยการโรงงาน",
+    role: "executive",
+    status: "active",
+    email: "exec@fixflow.co.th",
+    phone: "081-777-7777",
+    created_at: "2026-01-10T08:00:00.000Z",
+    last_login: _d(0.2),
+  },
+  {
+    user_id: "USR-009",
+    emp_id: "EMP-0750",
+    name: "อภิวัฒน์ สมหวัง",
+    username: "aphiwat.s",
+    department: "ฝ่ายซ่อมบำรุง",
+    position: "ช่างกล",
+    role: "technician",
+    status: "suspended",
+    email: "aphiwat.s@fixflow.co.th",
+    phone: "081-888-8888",
+    created_at: "2025-11-01T08:00:00.000Z",
+    last_login: _d(14),
+    skills: ["mechanical"],
+  },
+  {
+    user_id: "USR-010",
+    emp_id: "EMP-1200",
+    name: "สมพร พักผ่อน",
+    username: "somporn.p",
+    department: "ฝ่ายผลิต",
+    position: "พนักงานผลิต",
+    role: "requester",
+    status: "inactive",
+    email: "somporn.p@fixflow.co.th",
+    phone: "081-999-9999",
+    created_at: "2025-08-01T08:00:00.000Z",
+    last_login: _d(60),
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ─── Superadmin Audit Logs & Master Data ──────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+export type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "OVERRIDE" | "APPROVE" | "REJECT" | "LOGIN" | "STOCK_ADJUST";
+export type AuditEntity = "WORK_REQUEST" | "USER" | "SPARE_PART" | "PO" | "USER_APPROVAL" | "SYSTEM_SETTING";
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  user_name: string;
+  user_role: UserRole;
+  action: AuditAction;
+  entity: AuditEntity;
+  entity_id: string;
+  details: string;
+  ip_address: string;
+}
+
+export const MOCK_AUDIT_LOGS: AuditLogEntry[] = [
+  {
+    id: "LOG-1029",
+    timestamp: _d(0.05),
+    user_name: "ระบบ Superadmin",
+    user_role: "superadmin",
+    action: "LOGIN",
+    entity: "USER",
+    entity_id: "USR-001",
+    details: "เข้าสู่ระบบผ่าน Web Console (IP: 192.168.1.184)",
+    ip_address: "192.168.1.184",
+  },
+  {
+    id: "LOG-1028",
+    timestamp: _d(0.3),
+    user_name: "ระบบ Superadmin",
+    user_role: "superadmin",
+    action: "OVERRIDE",
+    entity: "WORK_REQUEST",
+    entity_id: "WR-2026-004",
+    details: "Force Assign งานให้ช่าง: เกรียงไกร ช่างเชื่อม (TECH002) และปรับสถานะเป็น doing",
+    ip_address: "192.168.1.184",
+  },
+  {
+    id: "LOG-1027",
+    timestamp: _d(0.8),
+    user_name: "ผู้บริหาร",
+    user_role: "executive",
+    action: "APPROVE",
+    entity: "PO",
+    entity_id: "PO-2026-088",
+    details: "อนุมัติใบสั่งซื้อลูกปืน SKF 6205-2RSH จำนวน 10 ชิ้น ยอดเงิน 18,500 บาท",
+    ip_address: "192.168.1.45",
+  },
+  {
+    id: "LOG-1026",
+    timestamp: _d(1.2),
+    user_name: "ผู้จัดการฝ่ายซ่อมบำรุง",
+    user_role: "admin",
+    action: "UPDATE",
+    entity: "SPARE_PART",
+    entity_id: "SP-002",
+    details: "เบิกจ่ายอะไหล่ ซีลกันน้ำมัน Viton 35x50x8 จำนวน 2 ชิ้น งาน WR-2026-001",
+    ip_address: "192.168.1.102",
+  },
+  {
+    id: "LOG-1025",
+    timestamp: _d(1.9),
+    user_name: "ระบบ Superadmin",
+    user_role: "superadmin",
+    action: "STOCK_ADJUST",
+    entity: "SPARE_PART",
+    entity_id: "SP-001",
+    details: "ปรับยอดตรวจนับคงคลังประจำสัปดาห์ จาก 8 เป็น 14 ชิ้น (เหตุผล: ตรวจนับสต็อกจริง)",
+    ip_address: "192.168.1.184",
+  },
+  {
+    id: "LOG-1024",
+    timestamp: _d(2.4),
+    user_name: "ระบบ Superadmin",
+    user_role: "superadmin",
+    action: "CREATE",
+    entity: "USER",
+    entity_id: "USR-011",
+    details: "สร้างผู้ใช้งานใหม่: ชัชวาลย์ เทคโน (TECH004) สิทธิ์ technician",
+    ip_address: "192.168.1.184",
+  },
+  {
+    id: "LOG-1023",
+    timestamp: _d(3.1),
+    user_name: "ผู้บริหาร",
+    user_role: "executive",
+    action: "APPROVE",
+    entity: "USER_APPROVAL",
+    entity_id: "UA-002",
+    details: "อนุมัติสิทธิ์การเข้าใช้งานระบบสำหรับ: ธวัชชัย มั่นคง แผนกซ่อมบำรุง",
+    ip_address: "192.168.1.45",
+  },
+  {
+    id: "LOG-1022",
+    timestamp: _d(4.5),
+    user_name: "ระบบ Superadmin",
+    user_role: "superadmin",
+    action: "UPDATE",
+    entity: "SYSTEM_SETTING",
+    entity_id: "CFG-SLA",
+    details: "ปรับปรุงค่า SLA งานวิกฤติ (Critical) จาก 3.0 ชม. เป็น 2.0 ชม.",
+    ip_address: "192.168.1.184",
+  },
+  {
+    id: "LOG-1021",
+    timestamp: _d(5.2),
+    user_name: "นภดล ฝ่ายผลิต",
+    user_role: "requester",
+    action: "CREATE",
+    entity: "WORK_REQUEST",
+    entity_id: "WR-2026-006",
+    details: "เปิดใบแจ้งซ่อมใหม่: สายพานลำเลียง C3 หยุดทำงานกะทันหัน",
+    ip_address: "192.168.2.14",
+  },
+  {
+    id: "LOG-1020",
+    timestamp: _d(6.0),
+    user_name: "ระบบ Superadmin",
+    user_role: "superadmin",
+    action: "DELETE",
+    entity: "WORK_REQUEST",
+    entity_id: "WR-2026-003",
+    details: "ยกเลิกงานซ่อมซ้ำซ้อนตามคำขอของหัวหน้าฝ่ายผลิต",
+    ip_address: "192.168.1.184",
+  },
+];
+
+export interface SystemMachineMaster {
+  id: string;
+  code: string;
+  name: string;
+  zone: string;
+  building: string;
+  line: string;
+  status: "operational" | "warning" | "down" | "maintenance";
+  critical_level: "high" | "medium" | "low";
+  installed_date: string;
+}
+
+export const MOCK_MACHINES_MASTER: SystemMachineMaster[] = [
+  { id: "MC-01", code: "CNC-01", name: "CNC Milling Machine VMC-850", zone: "Zone A", building: "Main Plant", line: "Line 1 - Machining", status: "operational", critical_level: "high", installed_date: "2023-01-15" },
+  { id: "MC-02", code: "PMP-02", name: "Hydraulic Press 500T", zone: "Zone B", building: "Main Plant", line: "Line 2 - Stamping", status: "down", critical_level: "high", installed_date: "2022-06-20" },
+  { id: "MC-03", code: "CV-03", name: "Overhead Conveyor Line A", zone: "Zone A", building: "Main Plant", line: "Line 1 - Assembly", status: "operational", critical_level: "medium", installed_date: "2023-08-10" },
+  { id: "MC-04", code: "BL-04", name: "Steam Boiler 2.5T", zone: "Utility", building: "Utility Building", line: "Utility System", status: "warning", critical_level: "high", installed_date: "2021-11-05" },
+  { id: "MC-05", code: "AC-05", name: "Chiller Plant #2 (Carrier)", zone: "Utility", building: "HVAC Plant", line: "HVAC System", status: "operational", critical_level: "medium", installed_date: "2024-03-01" },
+  { id: "MC-06", code: "PK-06", name: "Auto Packaging Robot KUKA", zone: "Zone C", building: "Main Plant", line: "Line 3 - Packaging", status: "operational", critical_level: "high", installed_date: "2024-05-18" },
+];
+
+export interface SystemSettingsConfig {
+  company_name: string;
+  maintenance_email: string;
+  monthly_budget: number;
+  po_manager_limit: number;
+  po_exec_limit: number;
+  sla_critical_hours: number;
+  sla_high_hours: number;
+  sla_normal_hours: number;
+  sla_low_hours: number;
+  auto_escalation: boolean;
+  line_notify_enabled: boolean;
+  email_notify_enabled: boolean;
+}
+
+export const MOCK_SYSTEM_CONFIG: SystemSettingsConfig = {
+  company_name: "FixFlow Precision Engineering Co., Ltd.",
+  maintenance_email: "maintenance-alert@fixflow.co.th",
+  monthly_budget: 80000,
+  po_manager_limit: 10000,
+  po_exec_limit: 50000,
+  sla_critical_hours: 2,
+  sla_high_hours: 8,
+  sla_normal_hours: 24,
+  sla_low_hours: 72,
+  auto_escalation: true,
+  line_notify_enabled: true,
+  email_notify_enabled: true,
 };
 
