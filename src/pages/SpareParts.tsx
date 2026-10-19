@@ -24,6 +24,13 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_SPARE_PARTS_EXTENDED,
@@ -362,17 +369,21 @@ function CreateSparePartModal({ existingParts, onClose, onSave }: CreateSparePar
                 <label className="text-xs font-semibold text-foreground mb-1.5 block">
                   หมวดหมู่อะไหล่ <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Select
                   value={category}
-                  onChange={(e) => handleCategoryChange(e.target.value as SparePartCategory)}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                  onValueChange={(val) => handleCategoryChange(val as SparePartCategory)}
                 >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {SPARE_PART_CATEGORY_LABEL[c]} ({c})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full text-sm font-medium">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {SPARE_PART_CATEGORY_LABEL[c]} ({c})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

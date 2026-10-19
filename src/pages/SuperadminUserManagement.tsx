@@ -10,6 +10,13 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_SYSTEM_USERS,
@@ -123,27 +130,35 @@ function UserFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Role</label>
-              <select
-                className="w-full h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              <Select
                 value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
+                onValueChange={(val) => setRole(val as UserRole)}
               >
-                {ALL_ROLES.map((r) => (
-                  <option key={r} value={r}>{ROLE_LABEL[r]}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-10 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>{ROLE_LABEL[r]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">สถานะ</label>
-              <select
-                className="w-full h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              <Select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as UserStatus)}
+                onValueChange={(val) => setStatus(val as UserStatus)}
               >
-                {ALL_STATUSES.map((s) => (
-                  <option key={s} value={s}>{USER_STATUS_LABEL[s]}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-10 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{USER_STATUS_LABEL[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -446,22 +461,31 @@ export default function SuperadminUserManagement({ embedded = false }: Superadmi
               )}
             </div>
             <div className="flex gap-2">
-              <select
-                className="h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              <Select
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as UserRole | "all")}
+                onValueChange={(val) => setRoleFilter(val as UserRole | "all")}
               >
-                <option value="all">ทุก Role</option>
-                {ALL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-              </select>
-              <select
-                className="h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                <SelectTrigger className="h-10 w-[140px] text-sm">
+                  <SelectValue placeholder="ทุก Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทุก Role</SelectItem>
+                  {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABEL[r]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+
+              <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as UserStatus | "all")}
+                onValueChange={(val) => setStatusFilter(val as UserStatus | "all")}
               >
-                <option value="all">ทุกสถานะ</option>
-                {ALL_STATUSES.map((s) => <option key={s} value={s}>{USER_STATUS_LABEL[s]}</option>)}
-              </select>
+                <SelectTrigger className="h-10 w-[140px] text-sm">
+                  <SelectValue placeholder="ทุกสถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทุกสถานะ</SelectItem>
+                  {ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{USER_STATUS_LABEL[s]}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">แสดง {filtered.length} จาก {users.length} บัญชี</p>

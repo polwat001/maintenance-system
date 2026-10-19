@@ -7,6 +7,13 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_AUDIT_LOGS,
@@ -122,37 +129,43 @@ export function AuditLogSection() {
 
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-            <select
+            <Select
               value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-              aria-label="กรองตามการกระทำ"
-              className="h-10 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+              onValueChange={setActionFilter}
             >
-              <option value="all">ทุก Action ({logs.length})</option>
-              <option value="LOGIN">LOGIN</option>
-              <option value="CREATE">CREATE</option>
-              <option value="UPDATE">UPDATE</option>
-              <option value="DELETE">DELETE</option>
-              <option value="OVERRIDE">OVERRIDE</option>
-              <option value="APPROVE">APPROVE</option>
-              <option value="REJECT">REJECT</option>
-              <option value="STOCK_ADJUST">STOCK_ADJUST</option>
-            </select>
+              <SelectTrigger aria-label="กรองตามการกระทำ" className="h-10 w-[180px] text-sm shadow-sm">
+                <SelectValue placeholder={`ทุก Action (${logs.length})`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุก Action ({logs.length})</SelectItem>
+                <SelectItem value="LOGIN">LOGIN</SelectItem>
+                <SelectItem value="CREATE">CREATE</SelectItem>
+                <SelectItem value="UPDATE">UPDATE</SelectItem>
+                <SelectItem value="DELETE">DELETE</SelectItem>
+                <SelectItem value="OVERRIDE">OVERRIDE</SelectItem>
+                <SelectItem value="APPROVE">APPROVE</SelectItem>
+                <SelectItem value="REJECT">REJECT</SelectItem>
+                <SelectItem value="STOCK_ADJUST">STOCK_ADJUST</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <select
+            <Select
               value={entityFilter}
-              onChange={(e) => setEntityFilter(e.target.value)}
-              aria-label="กรองตามโมดูลระบบ"
-              className="h-10 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+              onValueChange={setEntityFilter}
             >
-              <option value="all">ทุกโมดูล</option>
-              <option value="WORK_REQUEST">Work Request (งานซ่อม)</option>
-              <option value="USER">User (ผู้ใช้)</option>
-              <option value="SPARE_PART">Spare Part (อะไหล่)</option>
-              <option value="PO">PO (ใบสั่งซื้อ)</option>
-              <option value="USER_APPROVAL">User Approval</option>
-              <option value="SYSTEM_SETTING">System Setting</option>
-            </select>
+              <SelectTrigger aria-label="กรองตามโมดูลระบบ" className="h-10 w-[200px] text-sm shadow-sm">
+                <SelectValue placeholder="ทุกโมดูล" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกโมดูล</SelectItem>
+                <SelectItem value="WORK_REQUEST">Work Request (งานซ่อม)</SelectItem>
+                <SelectItem value="USER">User (ผู้ใช้)</SelectItem>
+                <SelectItem value="SPARE_PART">Spare Part (อะไหล่)</SelectItem>
+                <SelectItem value="PO">PO (ใบสั่งซื้อ)</SelectItem>
+                <SelectItem value="USER_APPROVAL">User Approval</SelectItem>
+                <SelectItem value="SYSTEM_SETTING">System Setting</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </Card>

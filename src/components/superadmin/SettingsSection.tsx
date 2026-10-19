@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_MACHINES_MASTER,
@@ -648,31 +655,37 @@ export function SettingsSection() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="machine-criticality-select" className="text-xs">ระดับความสำคัญ</Label>
-                  <select
-                    id="machine-criticality-select"
+                  <Select
                     value={machineForm.critical_level}
-                    onChange={(e) => setMachineForm({ ...machineForm, critical_level: e.target.value as any })}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                    onValueChange={(val) => setMachineForm({ ...machineForm, critical_level: val as any })}
                   >
-                    <option value="high">High (วิกฤติสูง)</option>
-                    <option value="medium">Medium (ปานกลาง)</option>
-                    <option value="low">Low (ทั่วไป)</option>
-                  </select>
+                    <SelectTrigger id="machine-criticality-select" className="w-full h-10 text-sm shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">High (วิกฤติสูง)</SelectItem>
+                      <SelectItem value="medium">Medium (ปานกลาง)</SelectItem>
+                      <SelectItem value="low">Low (ทั่วไป)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1">
                   <Label htmlFor="machine-status-select" className="text-xs">สถานะเครื่องจักร</Label>
-                  <select
-                    id="machine-status-select"
+                  <Select
                     value={machineForm.status}
-                    onChange={(e) => setMachineForm({ ...machineForm, status: e.target.value as any })}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                    onValueChange={(val) => setMachineForm({ ...machineForm, status: val as any })}
                   >
-                    <option value="operational">ปกติ (Operational)</option>
-                    <option value="warning">เตือน (Warning)</option>
-                    <option value="down">หยุดทำงาน (Down)</option>
-                    <option value="maintenance">ซ่อมบำรุง (Maintenance)</option>
-                  </select>
+                    <SelectTrigger id="machine-status-select" className="w-full h-10 text-sm shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="operational">ปกติ (Operational)</SelectItem>
+                      <SelectItem value="warning">เตือน (Warning)</SelectItem>
+                      <SelectItem value="down">หยุดทำงาน (Down)</SelectItem>
+                      <SelectItem value="maintenance">ซ่อมบำรุง (Maintenance)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Filter, LayoutGrid, List, Search, Wrench } from "lucide-react";
+import { Bell, Filter, LayoutGrid, List, LogOut, Search, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +74,18 @@ export default function TechnicianBoard() {
   const isPanningRef = useRef(false);
   const panStartXRef = useRef(0);
   const panStartScrollLeftRef = useRef(0);
-  const currentTech = (JSON.parse(sessionStorage.getItem("fixflow_user") ?? "{}") as { emp_id?: string }).emp_id || "TECH001";
+  const sessionUser = JSON.parse(sessionStorage.getItem("fixflow_user") ?? "{}") as {
+    emp_id?: string;
+    name?: string;
+  };
+  const currentTech = sessionUser.emp_id || "TECH001";
+  const currentTechName = sessionUser.name || "สมศักดิ์ ช่างไฟ";
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("fixflow_user");
+    toast.success("ออกจากระบบเรียบร้อยแล้ว");
+    navigate("/");
+  };
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"all" | WorkRequest["priority"]>("all");
   const [categoryFilter, setCategoryFilter] = useState<"all" | WorkRequest["category"]>("all");
@@ -221,11 +232,28 @@ export default function TechnicianBoard() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Technician Board</div>
-            <h1 className="font-bold truncate">สมศักดิ์ ช่างไฟ · TECH001</h1>
+            <h1 className="font-bold truncate">{currentTechName} · {currentTech}</h1>
           </div>
-          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10 relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-primary-foreground hover:bg-white/10 relative"
+            onClick={() => navigate("/notifications")}
+            aria-label="ศูนย์แจ้งเตือน"
+          >
             <Bell className="h-5 w-5" />
             {counts.critical > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-priority-critical priority-pulse" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-2 sm:px-3 text-primary-foreground/90 hover:text-white hover:bg-white/10 gap-1.5 text-xs sm:text-sm font-medium transition-colors shrink-0"
+            onClick={handleLogout}
+            title="ออกจากระบบ"
+            aria-label="ออกจากระบบ"
+          >
+            <LogOut className="h-4 w-4 text-rose-300" />
+            <span className="hidden sm:inline">ออกจากระบบ</span>
           </Button>
         </div>
       </header>

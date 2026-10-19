@@ -9,6 +9,13 @@ import {
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_TEAM_TECHNICIANS,
@@ -539,25 +546,33 @@ export default function TechnicianDetail({
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <select
+                <Select
                   value={jobStatusFilter}
-                  onChange={(e) => setJobStatusFilter(e.target.value)}
-                  className="flex-1 sm:flex-none h-8 rounded-lg border border-input bg-muted/40 px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-foreground cursor-pointer"
+                  onValueChange={setJobStatusFilter}
                 >
-                  <option value="all">สถานะทั้งหมด</option>
-                  <option value="doing">ดำเนินการ</option>
-                  <option value="assigned">รับงาน</option>
-                  <option value="complete">เสร็จสิ้น</option>
-                </select>
+                  <SelectTrigger aria-label="สถานะงาน" className="flex-1 sm:flex-none h-8 w-auto min-w-[120px] rounded-lg border-input bg-muted/40 px-2.5 text-xs font-medium">
+                    <SelectValue placeholder="สถานะทั้งหมด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">สถานะทั้งหมด</SelectItem>
+                    <SelectItem value="doing">ดำเนินการ</SelectItem>
+                    <SelectItem value="assigned">รับงาน</SelectItem>
+                    <SelectItem value="complete">เสร็จสิ้น</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
+                <Select
                   value={jobSort}
-                  onChange={(e) => setJobSort(e.target.value)}
-                  className="flex-1 sm:flex-none h-8 rounded-lg border border-input bg-muted/40 px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-foreground cursor-pointer"
+                  onValueChange={setJobSort}
                 >
-                  <option value="latest">ล่าสุด</option>
-                  <option value="oldest">เก่าสุด</option>
-                </select>
+                  <SelectTrigger aria-label="การเรียงลำดับ" className="flex-1 sm:flex-none h-8 w-auto min-w-[90px] rounded-lg border-input bg-muted/40 px-2.5 text-xs font-medium">
+                    <SelectValue placeholder="ล่าสุด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest">ล่าสุด</SelectItem>
+                    <SelectItem value="oldest">เก่าสุด</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

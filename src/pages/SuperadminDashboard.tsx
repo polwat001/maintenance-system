@@ -3,9 +3,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Crown, LogOut, LayoutDashboard, Users, Wrench, Package,
   ClipboardCheck, ShieldCheck, Settings, FileText, Menu, X,
-  ChevronRight, BarChart3, AlertTriangle, Clock, CheckCircle2,
+  ChevronRight, ChevronDown, BarChart3, AlertTriangle, Clock, CheckCircle2,
   TrendingUp, Activity, DollarSign, Target, ArrowUp, ArrowDown,
-  Minus, UserCheck, ShoppingCart, Eye,
+  Minus, UserCheck, ShoppingCart, Eye, Pencil,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -31,6 +31,7 @@ import {
   timeAgo,
 } from "@/lib/mockData";
 import { useRequests } from "@/lib/requestStore";
+import WorkOrderManagementUnified from "./WorkOrderManagementUnified";
 import { WorkRequestsSection } from "@/components/superadmin/WorkRequestsSection";
 import { SparePartsSection } from "@/components/superadmin/SparePartsSection";
 import { ApprovalsSection } from "@/components/superadmin/ApprovalsSection";
@@ -71,7 +72,14 @@ const MONTHLY_TREND = [
 const BUDGET = 80000;
 
 // ─── Nav items grouped by category ──────────────────────────────────────────
-type NavKey = "overview" | "users" | "work-requests" | "dispatch" | "spare-parts" | "qc" | "approvals" | "settings" | "audit-log";
+type NavKey = "overview" | "users" | "work-requests" | "work-orders-unified" | "dispatch" | "spare-parts" | "qc" | "approvals" | "settings" | "audit-log";
+
+type NavSubItem = {
+  key: NavKey;
+  label: string;
+  sublabel?: string;
+  icon?: React.ReactNode;
+};
 
 type NavItem = {
   key: NavKey;
@@ -79,6 +87,7 @@ type NavItem = {
   sublabel: string;
   icon: React.ReactNode;
   href?: string;
+  children?: NavSubItem[];
 };
 
 const NAV_GROUPS: {
@@ -90,10 +99,23 @@ const NAV_GROUPS: {
     title: "ภาพรวม & งานซ่อม",
     icon: <Wrench className="h-3 w-3 text-amber-400" />,
     items: [
-      { key: "overview",      label: "ภาพรวมระบบ",     sublabel: "System Overview",       icon: <LayoutDashboard className="h-5 w-5" /> },
-      { key: "work-requests", label: "จัดการงานซ่อม",   sublabel: "All Work Requests",     icon: <Wrench className="h-5 w-5" /> },
-      { key: "spare-parts",   label: "จัดการอะไหล่",    sublabel: "Spare Parts & Stock",   icon: <Package className="h-5 w-5" /> },
-      { key: "qc",            label: "ระบบ QC",         sublabel: "Quality Control",       icon: <ClipboardCheck className="h-5 w-5" /> },
+      { key: "overview",      label: "ภาพรวมระบบ",        sublabel: "System Overview",       icon: <LayoutDashboard className="h-5 w-5" /> },
+      {
+        key: "work-requests",
+        label: "จัดการงานซ่อมบำรุง",
+        sublabel: "มอบหมาย & ปรับสถานะ",
+        icon: <Wrench className="h-5 w-5" />,
+        children: [
+          {
+            key: "dispatch",
+            label: "กระดานมอบหมายงาน",
+            sublabel: "Dispatch Board",
+            icon: <UserCheck className="h-4 w-4" />,
+          },
+        ],
+      },
+      { key: "spare-parts",   label: "จัดการอะไหล่",       sublabel: "Spare Parts & Stock",   icon: <Package className="h-5 w-5" /> },
+      { key: "qc",            label: "ระบบ QC",            sublabel: "Quality Control",       icon: <ClipboardCheck className="h-5 w-5" /> },
     ],
   },
   {
@@ -114,7 +136,9 @@ const NAV_GROUPS: {
   },
 ];
 
-const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+const NAV_ITEMS: (NavItem | NavSubItem)[] = NAV_GROUPS.flatMap((g) =>
+  g.items.flatMap((item) => (item.children ? [item, ...item.children] : [item]))
+);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function hoursAgo(iso: string): number {
@@ -407,16 +431,32 @@ export default function SuperadminDashboard() {
   const currentTab = (searchParams.get("tab") as NavKey) || "overview";
   const [activeNav, setActiveNavState] = useState<NavKey>(currentTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>(() => ({
+    "work-requests": currentTab === "work-requests" || currentTab === "dispatch",
+  }));
 
   useEffect(() => {
-    const tab = searchParams.get("tab") as NavKey;
+    let tab = searchParams.get("tab") as NavKey;
+    if (tab === "work-orders-unified") {
+      tab = "work-requests";
+    }
     if (tab && (NAV_ITEMS.some((n) => n.key === tab) || tab === "dispatch")) {
       setActiveNavState(tab);
+      if (tab === "work-requests" || tab === "dispatch") {
+        setExpandedMenus((prev) => ({ ...prev, "work-requests": true }));
+      } else {
+        setExpandedMenus((prev) => ({ ...prev, "work-requests": false }));
+      }
     }
   }, [searchParams]);
 
   const setActiveNav = (tab: NavKey) => {
     setActiveNavState(tab);
+    if (tab === "work-requests" || tab === "dispatch") {
+      setExpandedMenus((prev) => ({ ...prev, "work-requests": true }));
+    } else {
+      setExpandedMenus((prev) => ({ ...prev, "work-requests": false }));
+    }
     navigate(`/superadmin/dashboard?tab=${tab}`, { replace: true });
   };
 
@@ -514,61 +554,148 @@ export default function SuperadminDashboard() {
 
           {/* Navigation */}
           <nav className="flex-1 min-h-0 p-2 space-y-2.5 overflow-y-auto">
-            {NAV_GROUPS.map((group, groupIdx) => (
-              <div key={group.title} className={cn("space-y-0.5", groupIdx > 0 && "pt-2 border-t border-sidebar-border/40")}>
-                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/50 px-2 py-1 flex items-center gap-1.5">
-                  <span className="shrink-0">{group.icon}</span>
-                  <span>{group.title}</span>
-                </p>
-                {group.items.map((item) => {
-                  const isActive = activeNav === item.key;
-                  const badge = item.key === "approvals" ? totalPending
-                    : item.key === "work-requests" ? kpi.critical
-                    : 0;
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => {
-                        if (item.href) {
-                          navigate(item.href);
-                        } else {
-                          setActiveNav(item.key);
-                        }
-                        setSidebarOpen(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-all duration-150",
-                        isActive
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-xs font-semibold"
-                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      )}
-                    >
-                      <span className={cn("shrink-0", isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/60")}>
-                        {item.icon}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium truncate">{item.label}</p>
-                          {badge > 0 && (
+            {(() => {
+              const unassignedCount = requests.filter((r) => !r.assigned_to || r.status === "open").length;
+
+              return NAV_GROUPS.map((group, groupIdx) => (
+                <div key={group.title} className={cn("space-y-0.5", groupIdx > 0 && "pt-2 border-t border-sidebar-border/40")}>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/50 px-2 py-1 flex items-center gap-1.5">
+                    <span className="shrink-0">{group.icon}</span>
+                    <span>{group.title}</span>
+                  </p>
+                  {group.items.map((item) => {
+                    const isActive = activeNav === item.key;
+                    const isChildActive = item.children?.some((c) => activeNav === c.key);
+                    const hasChildren = Boolean(item.children && item.children.length > 0);
+                    const isExpanded = hasChildren
+                      ? Boolean((isActive || isChildActive) && (expandedMenus[item.key] ?? true))
+                      : false;
+
+                    // When sub-menu is collapsed, combine unassigned dispatch count into parent badge
+                    const rawBadge = item.key === "approvals"
+                      ? totalPending
+                      : item.key === "work-requests"
+                      ? (isExpanded ? kpi.critical : kpi.critical + unassignedCount)
+                      : 0;
+
+                    // Always show badge whenever count > 0 (persistent notification)
+                    const shouldShowBadge = rawBadge > 0;
+
+                    return (
+                      <div key={item.key} className="space-y-0.5">
+                        <button
+                          onClick={() => {
+                            if (item.href) {
+                              navigate(item.href);
+                            } else {
+                              if (hasChildren) {
+                                if (isActive) {
+                                  // Toggle accordion if already active on parent page
+                                  setExpandedMenus((prev) => ({
+                                    ...prev,
+                                    [item.key]: !isExpanded,
+                                  }));
+                                } else {
+                                  setActiveNav(item.key);
+                                  setExpandedMenus((prev) => ({
+                                    ...prev,
+                                    [item.key]: true,
+                                  }));
+                                }
+                              } else {
+                                setActiveNav(item.key);
+                              }
+                            }
+                            setSidebarOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-all duration-150",
+                            isActive
+                              ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-xs font-semibold"
+                              : isChildActive
+                              ? "text-sidebar-foreground font-semibold bg-sidebar-accent/50"
+                              : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                          )}
+                        >
+                          <span className={cn("shrink-0", isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/60")}>
+                            {item.icon}
+                          </span>
+                          <p className="text-xs font-medium truncate flex-1 min-w-0">{item.label}</p>
+                          {shouldShowBadge && (
                             <span
+                              key={`${item.key}-${rawBadge}`}
                               className={cn(
-                                "min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center shadow-sm transition-all shrink-0",
+                                "min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold font-['Inter',sans-serif] leading-none flex items-center justify-center select-none tabular-nums shadow-xs transition-all shrink-0 animate-badge-pop ml-auto",
                                 isActive
-                                  ? "bg-red-500 text-white ring-2 ring-white shadow-sm"
-                                  : "bg-red-500 text-white ring-1 ring-white/20",
+                                  ? "bg-red-500 text-white ring-2 ring-white shadow-md"
+                                  : isChildActive
+                                  ? "bg-red-500 text-white ring-2 ring-white/60 shadow-sm"
+                                  : "bg-red-500 text-white ring-1 ring-white/20"
                               )}
                             >
-                              {badge}
+                              {rawBadge}
                             </span>
                           )}
-                        </div>
+                        </button>
+
+                        {/* Sub-items (กระดานมอบหมายงาน) with Silky-Smooth Grid Accordion */}
+                        {hasChildren && (
+                          <div
+                            className={cn(
+                              "sidebar-submenu-wrapper",
+                              isExpanded && "is-open"
+                            )}
+                          >
+                            <div className="sidebar-submenu-inner">
+                              <div className="ml-4 pl-2.5 border-l-2 border-sidebar-border/60 space-y-0.5 pt-1">
+                                {item.children!.map((sub) => {
+                                  const isSubActive = activeNav === sub.key;
+                                  const subBadge = sub.key === "dispatch" ? unassignedCount : 0;
+
+                                  return (
+                                    <button
+                                      key={sub.key}
+                                      onClick={() => {
+                                        setActiveNav(sub.key);
+                                        setSidebarOpen(false);
+                                      }}
+                                      className={cn(
+                                        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-all duration-150 text-xs",
+                                        isSubActive
+                                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-xs font-semibold"
+                                          : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                      )}
+                                    >
+                                      <span className={cn("shrink-0", isSubActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/60")}>
+                                        {sub.icon}
+                                      </span>
+                                      <span className="truncate flex-1 text-[11px] font-medium">{sub.label}</span>
+                                      {subBadge > 0 && (
+                                        <span
+                                          key={`${sub.key}-${subBadge}`}
+                                          className={cn(
+                                            "min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold font-['Inter',sans-serif] leading-none flex items-center justify-center select-none tabular-nums shrink-0 animate-badge-pop transition-all ml-auto",
+                                            isSubActive
+                                              ? "bg-red-500 text-white ring-2 ring-white shadow-md"
+                                              : "bg-red-500 text-white ring-1 ring-white/20 shadow-xs"
+                                          )}
+                                        >
+                                          {subBadge}
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {isActive && <ChevronRight className="h-3.5 w-3.5 ml-auto shrink-0 opacity-70" />}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+                    );
+                  })}
+                </div>
+              ));
+            })()}
           </nav>
 
           {/* Mini KPI at bottom */}
@@ -607,7 +734,7 @@ export default function SuperadminDashboard() {
           <div className="p-3.5 sm:p-5">
             {activeNav === "overview" && <OverviewSection requests={requests} />}
             {activeNav === "users" && <SuperadminUserManagement embedded />}
-            {activeNav === "work-requests" && <WorkRequestsSection />}
+            {activeNav === "work-requests" && <WorkOrderManagementUnified embedded />}
             {activeNav === "dispatch" && (
               <DispatchSection
                 onNavigateToWorkOrders={() => setActiveNav("work-requests")}

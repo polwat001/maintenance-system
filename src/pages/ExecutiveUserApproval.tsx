@@ -6,6 +6,13 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_USER_APPROVAL_REQUESTS,
@@ -233,16 +240,20 @@ export default function ExecutiveUserApproval() {
               </button>
             ))}
           </div>
-          <select
-            className="h-8 rounded-full border bg-background px-3 text-xs focus:outline-none"
+          <Select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as UserRole | "all")}
+            onValueChange={(val) => setRoleFilter(val as UserRole | "all")}
           >
-            <option value="all">ทุก Role</option>
-            {(Object.entries(ROLE_LABEL) as [UserRole, string][]).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 rounded-full border bg-background px-3 text-xs w-[130px]">
+              <SelectValue placeholder="ทุก Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุก Role</SelectItem>
+              {(Object.entries(ROLE_LABEL) as [UserRole, string][]).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* List */}

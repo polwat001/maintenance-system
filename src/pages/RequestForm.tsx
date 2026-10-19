@@ -29,6 +29,7 @@ import {
   Gauge,
   ImagePlus,
   History,
+  LogOut,
   PencilLine,
   MapPin,
   Paperclip,
@@ -155,6 +156,12 @@ const RequestForm = () => {
   const currentUserName = currentUser.name || REQUESTER_NAME;
   const currentUserId = currentUser.emp_id || "REQ042";
   const currentDepartment = currentUser.department || "ฝ่ายผลิต";
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("fixflow_user");
+    toast.success("ออกจากระบบเรียบร้อยแล้ว");
+    navigate("/");
+  };
   const photoInputRef = useRef<HTMLInputElement>(null);
   const qrImageInputRef = useRef<HTMLInputElement>(null);
   const toastedNotificationIdsRef = useRef<Set<string>>(new Set());
@@ -718,6 +725,17 @@ const RequestForm = () => {
                 {Math.min(myRequests.length, 99)}
               </span>
             )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-2 sm:px-3 text-primary-foreground/90 hover:text-white hover:bg-white/10 gap-1.5 text-xs sm:text-sm font-medium transition-colors shrink-0"
+            onClick={handleLogout}
+            title="ออกจากระบบ"
+            aria-label="ออกจากระบบ"
+          >
+            <LogOut className="h-4 w-4 text-rose-300" />
+            <span className="hidden sm:inline">ออกจากระบบ</span>
           </Button>
         </div>
       </header>

@@ -24,6 +24,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   CATEGORY_LABEL,
@@ -351,35 +358,41 @@ export default function DispatchSection({
               </div>
 
               <div className="sm:col-span-3">
-                <select
+                <Select
                   value={queueCategory}
-                  onChange={(e) => setQueueCategory(e.target.value)}
-                  aria-label="กรองตามหมวดหมู่"
-                  className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                  onValueChange={setQueueCategory}
                 >
-                  <option value="all">📁 ทุกหมวดหมู่</option>
-                  {Object.entries(CATEGORY_LABEL).map(([val, label]) => (
-                    <option key={val} value={val}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger aria-label="กรองตามหมวดหมู่" className="w-full h-9 text-xs font-medium shadow-xs">
+                    <SelectValue placeholder="📁 ทุกหมวดหมู่" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">📁 ทุกหมวดหมู่</SelectItem>
+                    {Object.entries(CATEGORY_LABEL).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="sm:col-span-3">
-                <select
+                <Select
                   value={queuePriority}
-                  onChange={(e) => setQueuePriority(e.target.value)}
-                  aria-label="กรองตามความสำคัญ"
-                  className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                  onValueChange={setQueuePriority}
                 >
-                  <option value="all">⚡ ทุกความสำคัญ</option>
-                  {Object.entries(PRIORITY_LABEL).map(([val, label]) => (
-                    <option key={val} value={val}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger aria-label="กรองตามความสำคัญ" className="w-full h-9 text-xs font-medium shadow-xs">
+                    <SelectValue placeholder="⚡ ทุกความสำคัญ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">⚡ ทุกความสำคัญ</SelectItem>
+                    {Object.entries(PRIORITY_LABEL).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -526,28 +539,34 @@ export default function DispatchSection({
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <select
+                <Select
                   value={techDept}
-                  onChange={(e) => setTechDept(e.target.value)}
-                  aria-label="เลือกแผนกช่าง"
-                  className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                  onValueChange={setTechDept}
                 >
-                  <option value="all">🏢 ทุกแผนกช่าง</option>
-                  <option value="elec">⚡ แผนกไฟฟ้า</option>
-                  <option value="mech">⚙️ แผนกเครื่องกล</option>
-                  <option value="hvac">❄️ แผนกระบบปรับอากาศ</option>
-                </select>
+                  <SelectTrigger aria-label="เลือกแผนกช่าง" className="w-full h-9 text-xs font-medium shadow-xs">
+                    <SelectValue placeholder="🏢 ทุกแผนกช่าง" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">🏢 ทุกแผนกช่าง</SelectItem>
+                    <SelectItem value="elec">⚡ แผนกไฟฟ้า</SelectItem>
+                    <SelectItem value="mech">⚙️ แผนกเครื่องกล</SelectItem>
+                    <SelectItem value="hvac">❄️ แผนกระบบปรับอากาศ</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
+                <Select
                   value={techStatus}
-                  onChange={(e) => setTechStatus(e.target.value as "all" | "available" | "busy")}
-                  aria-label="เลือกสถานะความพร้อมช่าง"
-                  className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                  onValueChange={(val) => setTechStatus(val as any)}
                 >
-                  <option value="all">👥 ทุกสถานะงาน</option>
-                  <option value="available">🟢 ช่างว่าง (≤ 1 งาน)</option>
-                  <option value="busy">🟡 กำลังมีงาน (≥ 2 งาน)</option>
-                </select>
+                  <SelectTrigger aria-label="เลือกสถานะความพร้อมช่าง" className="w-full h-9 text-xs font-medium shadow-xs">
+                    <SelectValue placeholder="👥 ทุกสถานะงาน" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">👥 ทุกสถานะงาน</SelectItem>
+                    <SelectItem value="available">🟢 ช่างว่าง (≤ 1 งาน)</SelectItem>
+                    <SelectItem value="busy">🟡 กำลังมีงาน (≥ 2 งาน)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

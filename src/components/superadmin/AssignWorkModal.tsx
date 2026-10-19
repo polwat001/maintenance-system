@@ -27,6 +27,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CATEGORY_LABEL,
   PRIORITY_LABEL,
   STATUS_LABEL,
@@ -352,15 +359,18 @@ export default function AssignWorkModal({
                       1. แผนการเริ่มปฏิบัติงาน (Schedule Plan)
                     </label>
 
-                    <select
+                    <Select
                       value={scheduleType}
-                      onChange={(e) => setScheduleType(e.target.value as "urgent" | "scheduled")}
-                      aria-label="เลือกแผนการเริ่มงาน"
-                      className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                      onValueChange={(val) => setScheduleType(val as "urgent" | "scheduled")}
                     >
-                      <option value="urgent">⚡ แผนด่วนพิเศษ: เริ่มทันที (Urgent ASAP)</option>
-                      <option value="scheduled">📅 แผนนัดหมาย: กำหนดวันและเวลาเริ่มงาน (Scheduled)</option>
-                    </select>
+                      <SelectTrigger aria-label="เลือกแผนการเริ่มงาน" className="w-full h-9 text-xs font-medium shadow-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="urgent">⚡ แผนด่วนพิเศษ: เริ่มทันที (Urgent ASAP)</SelectItem>
+                        <SelectItem value="scheduled">📅 แผนนัดหมาย: กำหนดวันและเวลาเริ่มงาน (Scheduled)</SelectItem>
+                      </SelectContent>
+                    </Select>
 
                     {scheduleType === "scheduled" && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 animate-in fade-in">
@@ -425,21 +435,24 @@ export default function AssignWorkModal({
                       <span className="text-[10px] text-muted-foreground">สำหรับงาน 2 คน</span>
                     </label>
 
-                    <select
-                      value={selectedCoTechId}
-                      onChange={(e) => setSelectedCoTechId(e.target.value)}
-                      aria-label="เลือกช่างผู้ช่วย"
-                      className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                    <Select
+                      value={selectedCoTechId || "none"}
+                      onValueChange={(val) => setSelectedCoTechId(val === "none" ? "" : val)}
                     >
-                      <option value="">-- ไม่มีช่างผู้ช่วย (ปฏิบัติงานคนเดียว) --</option>
-                      {allTechnicians
-                        .filter((t) => t.id !== selectedTechId)
-                        .map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} ({t.role} - {t.department})
-                          </option>
-                        ))}
-                    </select>
+                      <SelectTrigger aria-label="เลือกช่างผู้ช่วย" className="w-full h-9 text-xs shadow-xs">
+                        <SelectValue placeholder="-- ไม่มีช่างผู้ช่วย (ปฏิบัติงานคนเดียว) --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- ไม่มีช่างผู้ช่วย (ปฏิบัติงานคนเดียว) --</SelectItem>
+                        {allTechnicians
+                          .filter((t) => t.id !== selectedTechId)
+                          .map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name} ({t.role} - {t.department})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Safety & Special Instructions */}
@@ -530,29 +543,35 @@ export default function AssignWorkModal({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <select
+                      <Select
                         value={deptFilter}
-                        onChange={(e) => setDeptFilter(e.target.value)}
-                        aria-label="เลือกแผนกช่าง"
-                        className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                        onValueChange={setDeptFilter}
                       >
-                        <option value="all">🏢 ทุกแผนกช่าง (All Departments)</option>
-                        <option value="elec">⚡ แผนกไฟฟ้า (Electrical)</option>
-                        <option value="mech">⚙️ แผนกเครื่องกล (Mechanical)</option>
-                        <option value="hvac">❄️ แผนกระบบปรับอากาศ (HVAC)</option>
-                        <option value="hyd">🔧 ไฮดรอลิก & โครงสร้างเชื่อม</option>
-                      </select>
+                        <SelectTrigger aria-label="เลือกแผนกช่าง" className="w-full h-9 text-xs font-medium shadow-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">🏢 ทุกแผนกช่าง (All Departments)</SelectItem>
+                          <SelectItem value="elec">⚡ แผนกไฟฟ้า (Electrical)</SelectItem>
+                          <SelectItem value="mech">⚙️ แผนกเครื่องกล (Mechanical)</SelectItem>
+                          <SelectItem value="hvac">❄️ แผนกระบบปรับอากาศ (HVAC)</SelectItem>
+                          <SelectItem value="hyd">🔧 ไฮดรอลิก & โครงสร้างเชื่อม</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                      <select
+                      <Select
                         value={workloadFilter}
-                        onChange={(e) => setWorkloadFilter(e.target.value as any)}
-                        aria-label="กรองความพร้อมของช่าง"
-                        className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground shadow-xs cursor-pointer focus:ring-1 focus:ring-ring transition-all"
+                        onValueChange={(val) => setWorkloadFilter(val as any)}
                       >
-                        <option value="all">👥 ทุกสถานะความพร้อม</option>
-                        <option value="available">🟢 ช่างว่าง / งานน้อย (≤ 1 งาน)</option>
-                        <option value="busy">🟡 กำลังมีงาน (≥ 2 งาน)</option>
-                      </select>
+                        <SelectTrigger aria-label="กรองความพร้อมของช่าง" className="w-full h-9 text-xs font-medium shadow-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">👥 ทุกสถานะความพร้อม</SelectItem>
+                          <SelectItem value="available">🟢 ช่างว่าง / งานน้อย (≤ 1 งาน)</SelectItem>
+                          <SelectItem value="busy">🟡 กำลังมีงาน (≥ 2 งาน)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 

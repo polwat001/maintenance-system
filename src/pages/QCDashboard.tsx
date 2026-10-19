@@ -10,6 +10,13 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
@@ -523,28 +530,36 @@ function NewScheduleModal({
             </div>
 
             {form.template_kind === "matrix" ? (
-              <select
-                className="h-9 w-full rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-2 focus:ring-ring font-medium"
+              <Select
                 value={form.matrix_template_id}
-                onChange={(e) => handleSelectMatrixTemplate(e.target.value)}
+                onValueChange={(val) => handleSelectMatrixTemplate(val)}
               >
-                {matrixTemplates.map((t) => (
-                  <option key={t.template_id} value={t.template_id}>
-                    {t.title} ({t.template_type === "hourly_matrix" ? "24 ชม." : "แยกกะ"}) — {t.line_or_zone || "โรงงาน"}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9 w-full text-xs font-medium">
+                  <SelectValue placeholder="เลือก Matrix Template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {matrixTemplates.map((t) => (
+                    <SelectItem key={t.template_id} value={t.template_id}>
+                      {t.title} ({t.template_type === "hourly_matrix" ? "24 ชม." : "แยกกะ"}) — {t.line_or_zone || "โรงงาน"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
-              <select
-                className="h-9 w-full rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                value={form.template_id}
-                onChange={(e) => upd("template_id", e.target.value)}
+              <Select
+                value={form.template_id || "none"}
+                onValueChange={(val) => upd("template_id", val === "none" ? "" : val)}
               >
-                <option value="">— ไม่เลือก —</option>
-                {MOCK_CHECKSHEET_TEMPLATES.map((t) => (
-                  <option key={t.template_id} value={t.template_id}>{t.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9 w-full text-xs">
+                  <SelectValue placeholder="— ไม่เลือก —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— ไม่เลือก —</SelectItem>
+                  {MOCK_CHECKSHEET_TEMPLATES.map((t) => (
+                    <SelectItem key={t.template_id} value={t.template_id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </Field>
 
@@ -563,17 +578,27 @@ function NewScheduleModal({
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="ความถี่">
-              <select className="h-9 w-full rounded-md border bg-background px-3 text-xs" value={form.frequency} onChange={(e) => upd("frequency", e.target.value)}>
-                <option value="daily">รายวัน</option>
-                <option value="monthly">รายเดือน</option>
-              </select>
+              <Select value={form.frequency} onValueChange={(val) => upd("frequency", val)}>
+                <SelectTrigger className="h-9 w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">รายวัน</SelectItem>
+                  <SelectItem value="monthly">รายเดือน</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="ผู้รับผิดชอบ">
-              <select className="h-9 w-full rounded-md border bg-background px-3 text-xs" value={form.assigned_to} onChange={(e) => upd("assigned_to", e.target.value)}>
-                {Object.values(QC_OFFICER_MAP).map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
-              </select>
+              <Select value={form.assigned_to} onValueChange={(val) => upd("assigned_to", val)}>
+                <SelectTrigger className="h-9 w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(QC_OFFICER_MAP).map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 
@@ -936,7 +961,7 @@ export default function QCDashboard() {
                       {item.badge !== undefined && item.badge > 0 && (
                         <span
                           className={cn(
-                            "min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center shadow-sm transition-all shrink-0",
+                            "min-w-5 h-5 px-1 rounded-full text-[11px] font-bold font-sans leading-none pb-0.5 pl-px flex items-center justify-center select-none tabular-nums shadow-sm transition-all shrink-0",
                             isActive
                               ? "bg-red-500 text-white ring-2 ring-white"
                               : "bg-red-500 text-white ring-1 ring-white/20"
@@ -950,7 +975,6 @@ export default function QCDashboard() {
                       {item.sublabel}
                     </p>
                   </div>
-                  {isActive && <ChevronRight className="h-4 w-4 ml-auto shrink-0" />}
                 </button>
               );
             })}
@@ -1058,26 +1082,34 @@ export default function QCDashboard() {
                         onChange={(e) => setSearch(e.target.value)}
                       />
                     </div>
-                    <select
-                      className="h-9 rounded-md border bg-background px-3 text-xs"
+                    <Select
                       value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as any)}
+                      onValueChange={(val) => setStatusFilter(val as any)}
                     >
-                      <option value="all">ทุกสถานะ</option>
-                      <option value="scheduled">กำหนดการ</option>
-                      <option value="in-progress">กำลังตรวจ</option>
-                      <option value="done">ตรวจแล้ว</option>
-                      <option value="missed">ไม่ได้ตรวจ</option>
-                    </select>
-                    <select
-                      className="h-9 rounded-md border bg-background px-3 text-xs"
+                      <SelectTrigger className="h-9 w-full sm:w-[140px] text-xs">
+                        <SelectValue placeholder="ทุกสถานะ" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">ทุกสถานะ</SelectItem>
+                        <SelectItem value="scheduled">กำหนดการ</SelectItem>
+                        <SelectItem value="in-progress">กำลังตรวจ</SelectItem>
+                        <SelectItem value="done">ตรวจแล้ว</SelectItem>
+                        <SelectItem value="missed">ไม่ได้ตรวจ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
                       value={freqFilter}
-                      onChange={(e) => setFreqFilter(e.target.value as any)}
+                      onValueChange={(val) => setFreqFilter(val as any)}
                     >
-                      <option value="all">ทุกความถี่</option>
-                      <option value="daily">รายวัน</option>
-                      <option value="monthly">รายเดือน</option>
-                    </select>
+                      <SelectTrigger className="h-9 w-full sm:w-[130px] text-xs">
+                        <SelectValue placeholder="ทุกความถี่" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">ทุกความถี่</SelectItem>
+                        <SelectItem value="daily">รายวัน</SelectItem>
+                        <SelectItem value="monthly">รายเดือน</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </Card>
 

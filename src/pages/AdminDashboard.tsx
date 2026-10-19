@@ -1040,7 +1040,7 @@ export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {})
                           {pendingBadge > 0 && (
                             <span
                               className={cn(
-                                "min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center shadow-sm transition-all",
+                                "min-w-5 h-5 px-1 rounded-full text-[11px] font-bold font-sans leading-none pb-0.5 pl-px flex items-center justify-center select-none tabular-nums shadow-sm transition-all",
                                 isActive
                                   ? "bg-red-500 text-white ring-2 ring-white"
                                   : "bg-red-500 text-white ring-1 ring-white/20"
@@ -1054,7 +1054,6 @@ export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {})
                           {item.sublabel}
                         </p>
                       </div>
-                      {isActive && <ChevronRight className="h-4 w-4 ml-auto shrink-0" />}
                     </button>
                   );
                 })}

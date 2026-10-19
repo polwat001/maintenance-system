@@ -8,6 +8,13 @@ import {
   PieChart, Pie, Cell
 } from "recharts";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { MOCK_TEAM_TECHNICIANS, TeamTechnician } from "@/lib/teamMockData";
 
@@ -152,31 +159,39 @@ export default function TeamSection({ onViewDetail }: TeamSectionProps) {
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <select
+                <Select
                   value={selectedDept}
-                  onChange={(e) => setSelectedDept(e.target.value)}
-                  className="flex-1 sm:flex-none h-8 rounded-lg border border-input bg-muted/40 px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-foreground cursor-pointer"
+                  onValueChange={setSelectedDept}
                 >
-                  <option value="all">ทุกแผนก</option>
-                  <option value="ไฟฟ้า">งานระบบไฟฟ้า</option>
-                  <option value="เครื่องกล">งานระบบเครื่องกล</option>
-                  <option value="ปรับอากาศ">งานระบบปรับอากาศ</option>
-                  <option value="โครงสร้าง">งานโครงสร้างและโลหะ</option>
-                  <option value="อัตโนมัติ">งานระบบอัตโนมัติ</option>
-                  <option value="สุขาภิบาล">งานระบบสุขาภิบาล</option>
-                  <option value="บริการอาคาร">งานบริการอาคาร</option>
-                </select>
+                  <SelectTrigger aria-label="เลือกแผนก" className="flex-1 sm:flex-none h-8 w-auto min-w-[130px] rounded-lg border-input bg-muted/40 px-2.5 text-xs font-medium">
+                    <SelectValue placeholder="ทุกแผนก" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกแผนก</SelectItem>
+                    <SelectItem value="ไฟฟ้า">งานระบบไฟฟ้า</SelectItem>
+                    <SelectItem value="เครื่องกล">งานระบบเครื่องกล</SelectItem>
+                    <SelectItem value="ปรับอากาศ">งานระบบปรับอากาศ</SelectItem>
+                    <SelectItem value="โครงสร้าง">งานโครงสร้างและโลหะ</SelectItem>
+                    <SelectItem value="อัตโนมัติ">งานระบบอัตโนมัติ</SelectItem>
+                    <SelectItem value="สุขาภิบาล">งานระบบสุขาภิบาล</SelectItem>
+                    <SelectItem value="บริการอาคาร">งานบริการอาคาร</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <select
+                <Select
                   value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="flex-1 sm:flex-none h-8 rounded-lg border border-input bg-muted/40 px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-foreground cursor-pointer"
+                  onValueChange={setSelectedStatus}
                 >
-                  <option value="all">ทุกสถานะ</option>
-                  <option value="assigned">รับงาน</option>
-                  <option value="done">เสร็จสิ้น</option>
-                  <option value="doing">ดำเนินการ</option>
-                </select>
+                  <SelectTrigger aria-label="เลือกสถานะ" className="flex-1 sm:flex-none h-8 w-auto min-w-[110px] rounded-lg border-input bg-muted/40 px-2.5 text-xs font-medium">
+                    <SelectValue placeholder="ทุกสถานะ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ทุกสถานะ</SelectItem>
+                    <SelectItem value="assigned">รับงาน</SelectItem>
+                    <SelectItem value="done">เสร็จสิ้น</SelectItem>
+                    <SelectItem value="doing">ดำเนินการ</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

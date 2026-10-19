@@ -26,6 +26,7 @@ import ExecutiveUserApproval from "./pages/ExecutiveUserApproval.tsx";
 // ── Superadmin ──
 import SuperadminDashboard from "./pages/SuperadminDashboard.tsx";
 import SuperadminUserManagement from "./pages/SuperadminUserManagement.tsx";
+import WorkOrderManagementUnified from "./pages/WorkOrderManagementUnified.tsx";
 
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
 
@@ -69,6 +70,11 @@ const App = () => (
             <Route path="/superadmin/settings" element={<Navigate to="/superadmin/dashboard?tab=settings" replace />} />
             <Route path="/superadmin/audit-log" element={<Navigate to="/superadmin/dashboard?tab=audit-log" replace />} />
             <Route path="/superadmin/qc" element={<Navigate to="/superadmin/dashboard?tab=qc" replace />} />
+            {/* Work Order Management (Unified Assign + Status) */}
+            <Route path="/work-orders" element={<WorkOrderManagementUnified />} />
+            <Route path="/superadmin/work-orders" element={<WorkOrderManagementUnified />} />
+            <Route path="/work-orders/unified" element={<WorkOrderManagementUnified />} />
+            <Route path="/superadmin/work-orders-unified" element={<WorkOrderManagementUnified />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

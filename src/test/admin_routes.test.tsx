@@ -7,6 +7,8 @@ import TechnicianDetail from "../pages/TechnicianDetail";
 import SpareParts from "../pages/SpareParts";
 import SuperadminDashboard from "../pages/SuperadminDashboard";
 import AssignWorkModal from "../components/superadmin/AssignWorkModal";
+import WorkOrderManagementUnified from "../pages/WorkOrderManagementUnified";
+import { EditWorkOrderModal } from "../components/superadmin/EditWorkOrderModal";
 
 describe("Admin routes rendering", () => {
   it("renders /admin/technician-history without crashing", () => {
@@ -180,5 +182,55 @@ describe("Admin routes rendering", () => {
     expect(getByText("REQ-TEST-001")).toBeTruthy();
     expect(getByText("มอเตอร์ไฟฟ้าตัดการทำงาน")).toBeTruthy();
     expect(getAllByText("สมศักดิ์ ช่างไฟ").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders WorkOrderManagementUnified new page with pencil edit buttons", () => {
+    const { getByText, getAllByText } = render(
+      <MemoryRouter initialEntries={["/work-orders/unified"]}>
+        <WorkOrderManagementUnified />
+      </MemoryRouter>
+    );
+
+    expect(getByText(/จัดการงานซ่อมบำรุงแบบรวมศูนย์/)).toBeTruthy();
+    expect(getByText(/มอบหมาย & ปรับสถานะ/)).toBeTruthy();
+    // Verify pencil button "แก้ไข" or "แก้ไขงาน" exists
+    expect(getAllByText(/แก้ไข/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders EditWorkOrderModal combining assignment and status modification", () => {
+    const mockRequest = {
+      request_id: "REQ-TEST-002",
+      asset_name: "CNC-MILL-02",
+      asset_location: "Line 3 Factory B",
+      issue_summary: "สปินเดิลหมุนแล้วมีเสียงดังผิดปกติ",
+      priority: "critical" as const,
+      status: "open" as const,
+      sub_status: "reported" as const,
+      reported_time: new Date().toISOString(),
+      reported_by: "วิชัย ฝ่ายผลิต",
+      category: "mechanical" as const,
+      attachments: [],
+      status_timeline: [],
+      requester_notifications: [],
+    };
+
+    const { getByText, getAllByText } = render(
+      <EditWorkOrderModal
+        isOpen={true}
+        onClose={() => {}}
+        request={mockRequest}
+        onConfirm={() => {}}
+      />
+    );
+
+    expect(getByText(/แก้ไขใบสั่งซ่อม & ปรับสถานะงาน/)).toBeTruthy();
+    expect(getByText(/มอบหมาย & ปรับสถานะ/)).toBeTruthy();
+    expect(getByText("REQ-TEST-002")).toBeTruthy();
+    expect(getByText("สปินเดิลหมุนแล้วมีเสียงดังผิดปกติ")).toBeTruthy();
+    // Checks that status section, priority section, and technician picker are all present in the unified modal
+    expect(getByText("1. สถานะงานปัจจุบัน (Status)")).toBeTruthy();
+    expect(getByText("2. ระดับความสำคัญ (Priority)")).toBeTruthy();
+    expect(getByText("5. เลือกช่างผู้รับผิดชอบหลัก (Primary Assignee)")).toBeTruthy();
+    expect(getByText("บันทึกการแก้ไขทั้งหมด")).toBeTruthy();
   });
 });

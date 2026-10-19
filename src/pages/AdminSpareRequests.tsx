@@ -9,6 +9,13 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_SPARE_PART_REQUESTS,
@@ -240,28 +247,37 @@ export default function AdminSpareRequests({ embedded = false }: AdminSpareReque
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as SparePartRequestStatus | "all")}
+                onValueChange={(val) => setStatusFilter(val as SparePartRequestStatus | "all")}
               >
-                <option value="all">ทุกสถานะ</option>
-                <option value="pending">รออนุมัติ</option>
-                <option value="approved">อนุมัติแล้ว</option>
-                <option value="ordered">สั่งซื้อแล้ว</option>
-                <option value="received">ได้รับแล้ว</option>
-                <option value="rejected">ปฏิเสธ</option>
-              </select>
-              <select
-                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                <SelectTrigger className="h-9 w-[130px] text-sm">
+                  <SelectValue placeholder="ทุกสถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทุกสถานะ</SelectItem>
+                  <SelectItem value="pending">รออนุมัติ</SelectItem>
+                  <SelectItem value="approved">อนุมัติแล้ว</SelectItem>
+                  <SelectItem value="ordered">สั่งซื้อแล้ว</SelectItem>
+                  <SelectItem value="received">ได้รับแล้ว</SelectItem>
+                  <SelectItem value="rejected">ปฏิเสธ</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
                 value={urgencyFilter}
-                onChange={(e) => setUrgencyFilter(e.target.value as "all" | "normal" | "urgent" | "critical")}
+                onValueChange={(val) => setUrgencyFilter(val as "all" | "normal" | "urgent" | "critical")}
               >
-                <option value="all">ทุกความเร่งด่วน</option>
-                <option value="critical">วิกฤติ</option>
-                <option value="urgent">เร่งด่วน</option>
-                <option value="normal">ปกติ</option>
-              </select>
+                <SelectTrigger className="h-9 w-[140px] text-sm">
+                  <SelectValue placeholder="ทุกความเร่งด่วน" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทุกความเร่งด่วน</SelectItem>
+                  <SelectItem value="critical">วิกฤติ</SelectItem>
+                  <SelectItem value="urgent">เร่งด่วน</SelectItem>
+                  <SelectItem value="normal">ปกติ</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </Card>

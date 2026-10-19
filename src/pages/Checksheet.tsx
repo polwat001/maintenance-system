@@ -9,6 +9,13 @@ import {
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import {
   MOCK_CHECKSHEET_TEMPLATES,
@@ -408,18 +415,33 @@ function TemplateEditor({
                   <div key={col.col_id} className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
                     <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                     <Input className="h-8 text-sm flex-1" value={col.label} onChange={(e) => updateColumn(col.col_id, 'label', e.target.value)} placeholder="ชื่อคอลัมน์" />
-                    <select value={col.type} onChange={(e) => updateColumn(col.col_id, 'type', e.target.value as ChecksheetColumnType)}
-                      className="h-8 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary">
-                      {(Object.keys(COL_TYPE_LABEL) as ChecksheetColumnType[]).map((t) => (
-                        <option key={t} value={t}>{COL_TYPE_LABEL[t]}</option>
-                      ))}
-                    </select>
-                    <select value={col.width ?? 'md'} onChange={(e) => updateColumn(col.col_id, 'width', e.target.value)}
-                      className="h-8 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary">
-                      <option value="sm">แคบ</option>
-                      <option value="md">กลาง</option>
-                      <option value="lg">กว้าง</option>
-                    </select>
+                    <Select
+                      value={col.type}
+                      onValueChange={(val) => updateColumn(col.col_id, 'type', val as ChecksheetColumnType)}
+                    >
+                      <SelectTrigger className="h-8 w-[110px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(COL_TYPE_LABEL) as ChecksheetColumnType[]).map((t) => (
+                          <SelectItem key={t} value={t}>{COL_TYPE_LABEL[t]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={col.width ?? 'md'}
+                      onValueChange={(val) => updateColumn(col.col_id, 'width', val)}
+                    >
+                      <SelectTrigger className="h-8 w-[80px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sm">แคบ</SelectItem>
+                        <SelectItem value="md">กลาง</SelectItem>
+                        <SelectItem value="lg">กว้าง</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <button onClick={() => removeColumn(col.col_id)} className="text-muted-foreground hover:text-destructive transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
