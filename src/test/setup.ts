@@ -13,11 +13,3 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => {},
   }),
 });
-
-// Mock ResizeObserver for Recharts ResponsiveContainer in JSDOM
-global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
-

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Package, ArrowLeft, CheckCircle2, XCircle,
+  Package, ArrowLeft, LogOut, CheckCircle2, XCircle,
   Clock, ChevronRight, AlertTriangle, ShoppingCart, Building2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -31,8 +31,8 @@ const STATUS_CONFIG: Record<POStatus, { label: string; cls: string; icon: React.
 function RejectModal({ po, onClose, onConfirm }: { po: PurchaseOrder; onClose: () => void; onConfirm: (reason: string) => void }) {
   const [reason, setReason] = useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md border animate-in zoom-in-95 fade-in duration-200 ease-out">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md border">
         <div className="p-6 border-b">
           <h3 className="font-bold">ปฏิเสธใบสั่งซื้อ</h3>
           <p className="text-sm text-muted-foreground mt-0.5">{po.po_id} · ฿{po.total_amount.toLocaleString("th-TH")}</p>
@@ -71,9 +71,9 @@ function PODetailDrawer({ po, onClose, onApprove, onReject }: {
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs animate-in fade-in duration-300" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md bg-card sm:border-l shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-300 ease-out">
-        <div className="p-4 sm:p-5 border-b flex items-start justify-between gap-3">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-card border-l shadow-2xl flex flex-col">
+        <div className="p-5 border-b flex items-start justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground font-mono">{po.po_id}</p>
             <h3 className="font-bold text-lg">฿{po.total_amount.toLocaleString("th-TH")}</h3>
@@ -228,9 +228,9 @@ export default function ExecutivePurchaseApproval() {
             { label: "มูลค่ารออนุมัติ", value: `฿${kpi.pendingValue.toLocaleString("th-TH")}`, cls: "border-l-violet-500" },
             { label: "อนุมัติแล้ว", value: kpi.approved, cls: "border-l-emerald-500" },
           ].map((k) => (
-            <Card key={k.label} className={cn("p-3.5 sm:p-4 border-l-4 min-w-0", k.cls)}>
-              <p className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground truncate">{k.label}</p>
-              <p className="text-2xl sm:text-3xl font-bold tabular-nums whitespace-nowrap truncate mt-0.5">{k.value}</p>
+            <Card key={k.label} className={cn("p-4 border-l-4", k.cls)}>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{k.label}</p>
+              <p className="text-2xl font-bold tabular-nums">{k.value}</p>
             </Card>
           ))}
         </div>
@@ -266,82 +266,54 @@ export default function ExecutivePurchaseApproval() {
                   <Card
                     key={po.po_id}
                     className={cn(
-                      "p-4 sm:p-5 cursor-pointer transition-all hover:shadow-md border-l-4",
+                      "p-5 cursor-pointer transition-all hover:shadow-md border-l-4",
                       po.status === "pending" ? "border-l-amber-400" :
                       po.status === "approved" || po.status === "ordered" ? "border-l-emerald-400" : "border-l-red-400"
                     )}
                     onClick={() => setSelected(po)}
                   >
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      {/* Icon */}
-                      <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-muted grid place-items-center shrink-0 mt-0.5">
-                        <ShoppingCart className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-muted-foreground" />
+                    <div className="flex items-start gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-muted grid place-items-center shrink-0">
+                        <ShoppingCart className="h-5 w-5 text-muted-foreground" />
                       </div>
-
-                      {/* Main Info */}
                       <div className="flex-1 min-w-0">
-                        {/* Title Row + Status */}
                         <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <p className="font-mono text-sm text-primary font-bold">{po.po_id}</p>
+                          <p className="font-mono text-sm text-primary font-semibold">{po.po_id}</p>
                           <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold border", s.cls)}>
                             {s.icon}{s.label}
                           </span>
                         </div>
-
-                        {/* Meta Info */}
-                        <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1 shrink-0"><Building2 className="h-3 w-3" />{po.supplier ?? "ไม่ระบุ"}</span>
-                          <span className="flex items-center gap-1 shrink-0"><Package className="h-3 w-3" />{po.items.length} รายการ</span>
-                          <span className="shrink-0">ขอโดย: {po.requested_by_name}</span>
-                          <span className="shrink-0 text-muted-foreground/75">· {timeAgo(po.requested_at)}</span>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{po.supplier ?? "ไม่ระบุ"}</span>
+                          <span className="flex items-center gap-1"><Package className="h-3 w-3" />{po.items.length} รายการ</span>
+                          <span>ขอโดย: {po.requested_by_name}</span>
+                          <span>{timeAgo(po.requested_at)}</span>
                         </div>
-
-                        {/* Note */}
                         {po.note && (
-                          <p className="text-xs font-medium text-amber-700 bg-amber-50/80 border border-amber-200/60 rounded-md px-2 py-1 mt-1.5 inline-block">
-                            ⚠ {po.note}
-                          </p>
+                          <p className="text-xs text-amber-700 mt-1">⚠ {po.note}</p>
                         )}
-
-                        {/* Items Tags */}
-                        <div className="mt-2 flex flex-wrap gap-1.5">
+                        <div className="mt-2 flex flex-wrap gap-1">
                           {po.items.map((item, i) => (
-                            <span key={i} className="rounded-full bg-muted/80 border border-border/40 px-2.5 py-0.5 text-xs font-medium">
+                            <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-xs">
                               {item.part_name} ×{item.quantity}
                             </span>
                           ))}
                         </div>
                       </div>
-
-                      {/* Right side: Price & Desktop Actions */}
-                      <div className="flex flex-col justify-between items-end shrink-0 self-stretch">
-                        <p className="text-base sm:text-lg font-bold tabular-nums text-foreground">฿{po.total_amount.toLocaleString("th-TH")}</p>
-                        
-                        {/* Desktop buttons (hidden on mobile, aligned to bottom-right) */}
+                      <div className="text-right shrink-0">
+                        <p className="text-lg font-bold tabular-nums">฿{po.total_amount.toLocaleString("th-TH")}</p>
                         {po.status === "pending" && (
-                          <div className="hidden sm:flex gap-2 mt-auto pt-3" onClick={(e) => e.stopPropagation()}>
-                            <Button size="sm" className="h-8 px-3 text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-xs" onClick={() => handleApprove(po)}>
+                          <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                            <Button size="sm" className="h-7 px-2.5 text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => handleApprove(po)}>
                               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />อนุมัติ
                             </Button>
-                            <Button size="sm" variant="outline" className="h-8 px-3 text-xs border-red-200 text-red-600 hover:bg-red-50 font-medium" onClick={() => setRejectTarget(po)}>
+                            <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs border-red-200 text-red-600 hover:bg-red-50" onClick={() => setRejectTarget(po)}>
                               <XCircle className="h-3.5 w-3.5 mr-1" />ปฏิเสธ
                             </Button>
                           </div>
                         )}
                       </div>
                     </div>
-
-                    {/* Mobile buttons (visible only on mobile for pending status) */}
-                    {po.status === "pending" && (
-                      <div className="flex sm:hidden gap-2 mt-3 pt-2.5 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" className="flex-1 h-8 text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-medium" onClick={() => handleApprove(po)}>
-                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />อนุมัติ
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50 font-medium" onClick={() => setRejectTarget(po)}>
-                          <XCircle className="h-3.5 w-3.5 mr-1" />ปฏิเสธ
-                        </Button>
-                      </div>
-                    )}
                   </Card>
                 );
               })

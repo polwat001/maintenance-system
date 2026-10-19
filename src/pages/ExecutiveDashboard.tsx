@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  TrendingUp, BarChart3, AlertTriangle, Clock,
+  TrendingUp, LogOut, BarChart3, AlertTriangle, Clock,
   CheckCircle2, Package, Activity, Wrench, Users,
   DollarSign, Target, ArrowUp, ArrowDown, Minus,
   ShieldCheck, LayoutDashboard,
@@ -46,98 +46,27 @@ function Delta({ value, unit = "" }: { value: number; unit?: string }) {
   return <span className="flex items-center gap-0.5 text-muted-foreground text-xs"><Minus className="h-3 w-3" />0{unit}</span>;
 }
 
-interface KpiCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  unit?: string;
-  sub?: string;
-  accentClass?: string;
-  iconBgClass?: string;
-  trend?: number;
-}
-
 function KpiCard({
-  icon,
-  label,
-  value,
-  unit,
-  sub,
-  accentClass,
-  iconBgClass,
-  trend,
-}: KpiCardProps) {
-  // If unit is not explicitly passed, auto-separate trailing unit if string has number + unit (e.g. "3.2 ชม.", "2.3 งาน")
-  let displayValue = value;
-  let displayUnit = unit;
-  if (!displayUnit && typeof value === "string") {
-    const parts = value.trim().split(/\s+/);
-    if (parts.length === 2 && !isNaN(Number(parts[0]))) {
-      displayValue = parts[0];
-      displayUnit = parts[1];
-    }
-  }
-
-  const valStr = String(displayValue);
-  const isCompactValue = valStr.length > 5;
-
+  icon, label, value, sub, accentClass, trend,
+}: {
+  icon: React.ReactNode; label: string; value: string | number;
+  sub?: string; accentClass?: string; trend?: number;
+}) {
   return (
-    <Card
-      className={cn(
-        "relative overflow-hidden p-3.5 sm:p-5 border-l-4 transition-all duration-200 hover:shadow-md bg-card flex flex-col justify-between min-w-0",
-        accentClass ?? "border-l-primary"
+    <Card className={cn("relative overflow-hidden p-5 border-l-4 transition-shadow hover:shadow-md", accentClass ?? "border-l-primary")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="text-3xl font-bold tabular-nums leading-none">{value}</p>
+          {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+        </div>
+        <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-muted text-muted-foreground">{icon}</div>
+      </div>
+      {trend !== undefined && (
+        <div className="mt-2">
+          <Delta value={trend} unit="%" />
+        </div>
       )}
-    >
-      <div>
-        {/* Top Header: Label on left, Icon badge on top-right */}
-        <div className="flex items-center justify-between gap-1.5 mb-2 sm:mb-2.5">
-          <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate" title={label}>
-            {label}
-          </p>
-          <div
-            className={cn(
-              "h-8 w-8 sm:h-9 sm:w-9 rounded-lg grid place-items-center shrink-0 transition-colors shadow-xs",
-              iconBgClass ?? "bg-muted text-muted-foreground"
-            )}
-          >
-            {icon}
-          </div>
-        </div>
-
-        {/* Main Metric Value & Unit (Prominent on mobile, fits cleanly across all screens) */}
-        <div className="flex items-baseline gap-1.5 flex-nowrap overflow-hidden">
-          <span
-            className={cn(
-              "font-bold tabular-nums tracking-tight leading-none text-foreground whitespace-nowrap",
-              isCompactValue
-                ? "text-[28px] sm:text-3xl xl:text-[22px] 2xl:text-[28px]"
-                : "text-3xl sm:text-4xl xl:text-2xl 2xl:text-3xl"
-            )}
-            title={valStr}
-          >
-            {displayValue}
-          </span>
-          {displayUnit && (
-            <span className="text-xs sm:text-sm font-semibold text-muted-foreground shrink-0 whitespace-nowrap">
-              {displayUnit}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Subtext and Trend at bottom */}
-      <div className="mt-2.5 pt-1.5 border-t border-border/40 space-y-1">
-        {sub && (
-          <p className="text-[11px] text-muted-foreground truncate" title={sub}>
-            {sub}
-          </p>
-        )}
-        {trend !== undefined && (
-          <div className="pt-0.5">
-            <Delta value={trend} unit="%" />
-          </div>
-        )}
-      </div>
     </Card>
   );
 }
@@ -220,67 +149,37 @@ export default function ExecutiveDashboard() {
     >
       <div className="space-y-8">
 
+        {/* Quick Action */}
+        <div className="flex flex-wrap gap-3">
+          <Button
+            className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+            onClick={() => navigate("/executive/purchase-approval")}
+          >
+            <Package className="h-4 w-4" />อนุมัติการสั่งซื้อ
+            {kpi.pendingPO > 0 && <span className="bg-white/20 rounded-full px-1.5 py-0.5 text-xs">{kpi.pendingPO}</span>}
+          </Button>
+          <Button
+            className="gap-2 bg-blue-500 hover:bg-blue-600 text-white"
+            onClick={() => navigate("/executive/user-approval")}
+          >
+            <Users className="h-4 w-4" />อนุมัติสิทธิ์ผู้ใช้
+            {kpi.pendingApproval > 0 && <span className="bg-white/20 rounded-full px-1.5 py-0.5 text-xs">{kpi.pendingApproval}</span>}
+          </Button>
+        </div>
+
         {/* KPI Row */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <div className="h-7 w-7 rounded-md bg-primary/10 text-primary grid place-items-center"><BarChart3 className="h-4 w-4" /></div>
             <h2 className="font-semibold text-base">ตัวชี้วัดหลัก (Executive KPIs)</h2>
           </div>
-          <div className="grid gap-3.5 sm:gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
-            <KpiCard
-              icon={<DollarSign className="h-4.5 w-4.5 text-violet-600" />}
-              iconBgClass="bg-violet-100/80 text-violet-700"
-              label="งบอะไหล่เดือนนี้"
-              value={`฿${kpi.currentMonthCost.toLocaleString("th-TH")}`}
-              sub={`${kpi.budgetUsed}% ของงบประมาณ`}
-              accentClass="border-l-violet-500"
-            />
-            <KpiCard
-              icon={<Clock className="h-4.5 w-4.5 text-orange-600" />}
-              iconBgClass="bg-orange-100/80 text-orange-700"
-              label="MTTR เฉลี่ย"
-              value="3.2"
-              unit="ชม."
-              sub="ลดลง 0.4 ชม. เทียบเดือนก่อน"
-              accentClass="border-l-orange-500"
-              trend={-0.4}
-            />
-            <KpiCard
-              icon={<TrendingUp className="h-4.5 w-4.5 text-emerald-600" />}
-              iconBgClass="bg-emerald-100/80 text-emerald-700"
-              label="OEE / Uptime"
-              value="94.8%"
-              sub="สูงกว่าเป้า 92%"
-              accentClass="border-l-emerald-500"
-              trend={2.8}
-            />
-            <KpiCard
-              icon={<AlertTriangle className="h-4.5 w-4.5 text-red-600" />}
-              iconBgClass="bg-red-100/80 text-red-700"
-              label="งานวิกฤติค้าง"
-              value={kpi.critical}
-              unit="งาน"
-              sub="เกิน SLA ที่กำหนด"
-              accentClass="border-l-red-500"
-            />
-            <KpiCard
-              icon={<Users className="h-4.5 w-4.5 text-blue-600" />}
-              iconBgClass="bg-blue-100/80 text-blue-700"
-              label="ประสิทธิภาพทีม"
-              value={(kpi.total / 3).toFixed(1)}
-              unit="งาน/ช่าง"
-              sub="เฉลี่ยงานต่อช่าง"
-              accentClass="border-l-blue-500"
-            />
-            <KpiCard
-              icon={<CheckCircle2 className="h-4.5 w-4.5 text-teal-600" />}
-              iconBgClass="bg-teal-100/80 text-teal-700"
-              label="อัตราปิดงาน"
-              value={`${kpi.completionRate}%`}
-              sub={`${kpi.complete}/${kpi.total} งานทั้งหมด`}
-              accentClass="border-l-teal-500"
-              trend={5}
-            />
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
+            <KpiCard icon={<DollarSign className="h-5 w-5 text-violet-500" />} label="งบอะไหล่เดือนนี้" value={`฿${kpi.currentMonthCost.toLocaleString("th-TH")}`} sub={`${kpi.budgetUsed}% ของงบประมาณ`} accentClass="border-l-violet-500" />
+            <KpiCard icon={<Clock className="h-5 w-5 text-orange-500" />} label="MTTR เฉลี่ย" value="3.2 ชม." sub="ลดลง 0.4 ชม. เทียบเดือนก่อน" accentClass="border-l-orange-500" trend={-0.4} />
+            <KpiCard icon={<TrendingUp className="h-5 w-5 text-emerald-600" />} label="OEE / Uptime" value="94.8%" sub="สูงกว่าเป้า 92%" accentClass="border-l-emerald-500" trend={2.8} />
+            <KpiCard icon={<AlertTriangle className="h-5 w-5 text-red-500" />} label="งานวิกฤติค้าง" value={kpi.critical} sub="เกิน SLA ที่กำหนด" accentClass="border-l-red-500" />
+            <KpiCard icon={<Users className="h-5 w-5 text-blue-500" />} label="ประสิทธิภาพทีม" value={`${(kpi.total / 3).toFixed(1)} งาน`} sub="เฉลี่ยงานต่อช่าง" accentClass="border-l-blue-500" />
+            <KpiCard icon={<CheckCircle2 className="h-5 w-5 text-teal-600" />} label="อัตราปิดงาน" value={`${kpi.completionRate}%`} sub={`${kpi.complete}/${kpi.total} งานทั้งหมด`} accentClass="border-l-teal-500" trend={5} />
           </div>
         </section>
 

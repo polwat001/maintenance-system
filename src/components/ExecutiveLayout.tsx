@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   TrendingUp, LogOut, BarChart3, Package, Users, Menu, X,
-  ChevronRight, DollarSign,
-  Clock, CheckCircle2, AlertTriangle, ShoppingCart,
+  ShieldCheck, LayoutDashboard, ChevronRight, DollarSign,
+  Clock, CheckCircle2, AlertTriangle, Wrench, ShoppingCart,
   Layers, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,9 +69,9 @@ export default function ExecutiveLayout({
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-background text-slate-800 overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col text-slate-800">
       {/* ─── Topbar ────────────────────────────────────────────────────────── */}
-      <header className="shrink-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
+      <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {/* Mobile menu toggle */}
@@ -111,16 +111,25 @@ export default function ExecutiveLayout({
                 สิทธิ์รออนุมัติ: {pendingUserApproval}
               </span>
             )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-white/10"
+              onClick={() => navigate("/")}
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </header>
 
       {/* ─── Body: Sidebar + Main Content ──────────────────────────────────── */}
-      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+      <div className="flex-1 flex relative">
         {/* Mobile backdrop */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -128,34 +137,27 @@ export default function ExecutiveLayout({
         {/* ── Sidebar ── */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 lg:static lg:z-auto",
-            "w-64 h-full shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border shadow-2xl lg:shadow-none",
-            "transition-transform duration-300 ease-in-out",
+            "fixed lg:sticky top-[57px] z-20 h-[calc(100vh-57px)] w-64 shrink-0",
+            "flex flex-col bg-sidebar transition-transform duration-300 ease-in-out",
+            "border-r border-sidebar-border",
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
           {/* User Card */}
-          <div className="p-4 border-b border-sidebar-border shrink-0 flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="p-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-amber-500/20 border border-amber-400/40 grid place-items-center text-amber-300 font-bold text-sm shrink-0">
                 EX
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-sidebar-foreground truncate">วิเชียร ธนบดีทรัพย์</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">EXEC001 · ผู้บริหารระดับสูง</p>
+                <p className="text-xs text-sidebar-foreground/60">EXEC001 · ผู้บริหารระดับสูง</p>
               </div>
             </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground p-1 shrink-0"
-              aria-label="ปิดเมนู"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
 
           {/* Navigation Items */}
-          <nav className="flex-1 min-h-0 p-3 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-3 py-2">
               เมนูผู้บริหาร
             </p>
@@ -182,14 +184,7 @@ export default function ExecutiveLayout({
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">{item.label}</p>
                       {item.badge !== undefined && item.badge > 0 && (
-                        <span
-                          className={cn(
-                            "min-w-5 h-5 px-1 rounded-full text-[11px] font-bold font-sans leading-none pb-0.5 pl-px flex items-center justify-center select-none tabular-nums shadow-sm transition-all",
-                            isActive
-                              ? "bg-red-500 text-white ring-2 ring-white"
-                              : cn("text-white ring-1 ring-white/20", item.badgeColor || "bg-red-500")
-                          )}
-                        >
+                        <span className={cn("text-white rounded-full text-[10px] font-bold px-1.5 py-0.2", item.badgeColor)}>
                           {item.badge}
                         </span>
                       )}
@@ -198,13 +193,49 @@ export default function ExecutiveLayout({
                       {item.sublabel}
                     </p>
                   </div>
+                  {isActive && <ChevronRight className="h-4 w-4 ml-auto shrink-0" />}
                 </button>
               );
             })}
+
+            {/* Other Factory Departments */}
+            <div className="pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-3 py-2">
+                ส่วนงานในโรงงาน
+              </p>
+              <button
+                onClick={() => navigate("/qc/dashboard")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span>ศูนย์ควบคุมคุณภาพ (QC)</span>
+              </button>
+              <button
+                onClick={() => navigate("/admin/dashboard")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Admin Dashboard</span>
+              </button>
+              <button
+                onClick={() => navigate("/spare-parts")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
+              >
+                <Package className="h-4 w-4" />
+                <span>ระบบคลังอะไหล่</span>
+              </button>
+              <button
+                onClick={() => navigate("/board")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
+              >
+                <Wrench className="h-4 w-4" />
+                <span>กระดานช่างซ่อม</span>
+              </button>
+            </div>
           </nav>
 
           {/* Quick Metrics Widget in Sidebar */}
-          <div className="p-3 border-t border-sidebar-border space-y-2 shrink-0">
+          <div className="p-3 border-t border-sidebar-border space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-1">สรุปสถานะฝ่ายบริหาร</p>
             {[
               { label: "OEE / Uptime", value: "94.8%", dot: "bg-emerald-500" },
@@ -223,7 +254,7 @@ export default function ExecutiveLayout({
           </div>
 
           {/* Logout */}
-          <div className="p-3 border-t border-sidebar-border shrink-0">
+          <div className="p-3 border-t border-sidebar-border">
             <button
               onClick={() => navigate("/")}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm"
@@ -235,7 +266,7 @@ export default function ExecutiveLayout({
         </aside>
 
         {/* ── Main Content Area ── */}
-        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto min-w-0">
           {/* Sub Header */}
           <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <div>
@@ -245,7 +276,7 @@ export default function ExecutiveLayout({
             {actions && <div className="flex items-center gap-2">{actions}</div>}
           </div>
 
-          <div className="p-4 sm:p-6 w-full animate-slide-up">
+          <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
             {children}
           </div>
         </main>

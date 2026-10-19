@@ -1,10 +1,5 @@
-import { useMemo, useState, useEffect } from "react";
-import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
-import AdminSpareRequests from "./AdminSpareRequests.tsx";
-import TechnicianHistory from "./TechnicianHistory.tsx";
-import TechnicianDetail from "./TechnicianDetail.tsx";
-import TeamSection from "@/components/admin/TeamSection.tsx";
-import Checksheet from "./Checksheet.tsx";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -19,7 +14,6 @@ import {
   Legend,
   LineChart,
   Line,
-  LabelList,
 } from "recharts";
 import {
   Wrench,
@@ -39,24 +33,16 @@ import {
   ClipboardList,
   ShieldAlert,
   ArrowRight,
-  ArrowLeft,
   History,
-  Search,
-  Plus,
-  UserPlus,
-  Briefcase,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useRequests } from "@/lib/requestStore";
 import {
   CATEGORY_LABEL,
   STATUS_LABEL,
   PRIORITY_LABEL,
   TECHNICIAN_MAP,
-  addTechnician,
-  Technician,
   timeAgo,
   WorkRequest,
   MOCK_SPARE_PARTS_EXTENDED,
@@ -87,85 +73,55 @@ const STATUS_BAR_COLOR: Record<string, string> = {
   complete: "#10b981",
 };
 
-// ─── Nav items grouped by category ──────────────────────────────────────────
+// ─── Nav items ────────────────────────────────────────────────────────────────
 type NavKey = "overview" | "pipeline" | "team" | "spare" | "checksheet" | "spare-requests" | "technician-history";
 
-type NavItem = {
-  key: NavKey;
-  label: string;
-  sublabel: string;
-  icon: React.ReactNode;
-  href?: string;
-};
-
-const ADMIN_NAV_GROUPS: {
-  title: string;
-  icon: React.ReactNode;
-  items: NavItem[];
-}[] = [
+const NAV_ITEMS: { key: NavKey; label: string; sublabel: string; icon: React.ReactNode; href?: string }[] = [
   {
-    title: "ภาพรวม & งานซ่อม",
-    icon: <Activity className="h-3.5 w-3.5 text-blue-400" />,
-    items: [
-      {
-        key: "overview",
-        label: "ภาพรวม",
-        sublabel: "KPIs & กราฟ",
-        icon: <LayoutDashboard className="h-5 w-5" />,
-      },
-      {
-        key: "pipeline",
-        label: "สถานะงาน",
-        sublabel: "Pipeline & งานค้าง",
-        icon: <Activity className="h-5 w-5" />,
-      },
-      {
-        key: "checksheet",
-        label: "เช็คชีท",
-        sublabel: "Compliance & บันทึก",
-        icon: <ClipboardList className="h-5 w-5" />,
-      },
-    ],
+    key: "overview",
+    label: "ภาพรวม",
+    sublabel: "KPIs & กราฟ",
+    icon: <LayoutDashboard className="h-5 w-5" />,
   },
   {
-    title: "ทีมช่าง & รายงาน",
-    icon: <Users className="h-3.5 w-3.5 text-sky-400" />,
-    items: [
-      {
-        key: "team",
-        label: "ทีมช่าง",
-        sublabel: "ประสิทธิภาพ",
-        icon: <Users className="h-5 w-5" />,
-      },
-      {
-        key: "technician-history",
-        label: "ประวัติช่าง",
-        sublabel: "Timeline & รายงาน",
-        icon: <History className="h-5 w-5" />,
-      },
-    ],
+    key: "pipeline",
+    label: "สถานะงาน",
+    sublabel: "Pipeline & งานค้าง",
+    icon: <Activity className="h-5 w-5" />,
   },
   {
-    title: "จัดการอะไหล่",
-    icon: <Package className="h-3.5 w-3.5 text-amber-400" />,
-    items: [
-      {
-        key: "spare",
-        label: "อะไหล่",
-        sublabel: "สต็อก & การใช้งาน",
-        icon: <Package className="h-5 w-5" />,
-      },
-      {
-        key: "spare-requests",
-        label: "ขออะไหล่",
-        sublabel: "คำขอจากช่าง",
-        icon: <ShieldAlert className="h-5 w-5" />,
-      },
-    ],
+    key: "team",
+    label: "ทีมช่าง",
+    sublabel: "ประสิทธิภาพ",
+    icon: <Users className="h-5 w-5" />,
+  },
+  {
+    key: "spare",
+    label: "อะไหล่",
+    sublabel: "สต็อก & การใช้งาน",
+    icon: <Package className="h-5 w-5" />,
+  },
+  {
+    key: "checksheet",
+    label: "เช็คชีท",
+    sublabel: "Compliance & บันทึก",
+    icon: <ClipboardList className="h-5 w-5" />,
+  },
+  {
+    key: "spare-requests",
+    label: "ขออะไหล่",
+    sublabel: "คำขอจากช่าง",
+    icon: <ShieldAlert className="h-5 w-5" />,
+    href: "/admin/spare-requests",
+  },
+  {
+    key: "technician-history",
+    label: "ประวัติช่าง",
+    sublabel: "Timeline & รายงาน",
+    icon: <History className="h-5 w-5" />,
+    href: "/admin/technician-history",
   },
 ];
-
-const NAV_ITEMS: NavItem[] = ADMIN_NAV_GROUPS.flatMap((g) => g.items);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function hoursAgo(iso: string): number {
@@ -178,67 +134,24 @@ interface KpiCardProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  unit?: string;
   sub?: string;
   accentClass?: string;
-  iconBgClass?: string;
   pulse?: boolean;
 }
-function KpiCard({ icon, label, value, unit, sub, accentClass, iconBgClass, pulse }: KpiCardProps) {
-  let displayValue = value;
-  let displayUnit = unit;
-  if (!displayUnit && typeof value === "string") {
-    const parts = value.trim().split(/\s+/);
-    if (parts.length === 2 && !isNaN(Number(parts[0]))) {
-      displayValue = parts[0];
-      displayUnit = parts[1];
-    }
-  }
-
-  const valStr = String(displayValue);
-  const isCompactValue = valStr.length > 5;
-
+function KpiCard({ icon, label, value, sub, accentClass, pulse }: KpiCardProps) {
   return (
-    <Card
-      className={cn(
-        "relative overflow-hidden p-3.5 sm:p-5 border-l-4 bg-card transition-all duration-200 hover:shadow-md flex flex-col justify-between min-w-0",
-        accentClass ?? "border-l-primary"
-      )}
-    >
-      <div>
-        <div className="flex items-center justify-between gap-1.5 mb-2 sm:mb-2.5">
-          <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate" title={label}>{label}</p>
-          <div className={cn("h-8 w-8 sm:h-9 sm:w-9 rounded-lg grid place-items-center shrink-0 transition-colors shadow-xs", iconBgClass ?? "bg-muted text-muted-foreground")}>
-            {icon}
-          </div>
+    <Card className={cn("relative overflow-hidden p-5 border-l-4 bg-card transition-shadow hover:shadow-md", accentClass ?? "border-l-primary")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="text-3xl font-bold tabular-nums leading-none">{value}</p>
+          {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
         </div>
-
-        <div className="flex items-baseline gap-1.5 flex-nowrap overflow-hidden">
-          <span
-            className={cn(
-              "font-bold tabular-nums tracking-tight leading-none text-foreground whitespace-nowrap",
-              isCompactValue
-                ? "text-[28px] sm:text-3xl xl:text-[22px] 2xl:text-[28px]"
-                : "text-3xl sm:text-4xl xl:text-2xl 2xl:text-3xl"
-            )}
-            title={valStr}
-          >
-            {displayValue}
-          </span>
-          {displayUnit && (
-            <span className="text-xs sm:text-sm font-semibold text-muted-foreground shrink-0 whitespace-nowrap">
-              {displayUnit}
-            </span>
-          )}
+        <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-muted text-muted-foreground">
+          {icon}
         </div>
       </div>
-
-      {sub && (
-        <div className="mt-2.5 pt-1.5 border-t border-border/40">
-          <p className="text-[11px] text-muted-foreground truncate" title={sub}>{sub}</p>
-        </div>
-      )}
-      {pulse && <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-priority-critical priority-pulse" />}
+      {pulse && <span className="absolute top-3 right-3 h-2.5 w-2.5 rounded-full bg-priority-critical priority-pulse" />}
     </Card>
   );
 }
@@ -324,13 +237,13 @@ function OverviewSection({
       {/* KPI Row */}
       <section>
         <SectionTitle icon={<BarChart3 className="h-4 w-4" />} title="ตัวชี้วัดหลัก (KPIs)" />
-        <div className="grid gap-3.5 sm:gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
-          <KpiCard icon={<BarChart3 className="h-4.5 w-4.5 text-primary" />} iconBgClass="bg-primary/10 text-primary" label="งานทั้งหมด" value={kpi.total} sub="ทุกสถานะรวมกัน" accentClass="border-l-primary" />
-          <KpiCard icon={<AlertTriangle className="h-4.5 w-4.5 text-red-600" />} iconBgClass="bg-red-100/80 text-red-700" label="งานวิกฤติ" value={kpi.critical} sub="ต้องดำเนินการทันที" accentClass="border-l-red-500" pulse={kpi.critical > 0} />
-          <KpiCard icon={<Clock className="h-4.5 w-4.5 text-orange-600" />} iconBgClass="bg-orange-100/80 text-orange-700" label="ค้างเกิน 24 ชม." value={kpi.overdue} sub="ยังไม่เสร็จ" accentClass="border-l-orange-500" />
-          <KpiCard icon={<CheckCircle2 className="h-4.5 w-4.5 text-emerald-600" />} iconBgClass="bg-emerald-100/80 text-emerald-700" label="เสร็จสิ้นแล้ว" value={kpi.complete} sub={`${kpi.completionRate}% ของงาน`} accentClass="border-l-emerald-500" />
-          <KpiCard icon={<Package className="h-4.5 w-4.5 text-violet-600" />} iconBgClass="bg-violet-100/80 text-violet-700" label="รออะไหล่" value={kpi.waiting} sub="รอจัดซื้อ/จัดส่ง" accentClass="border-l-violet-500" />
-          <KpiCard icon={<TrendingUp className="h-4.5 w-4.5 text-cyan-600" />} iconBgClass="bg-cyan-100/80 text-cyan-700" label="MTTR (จำลอง)" value={kpi.mockMttr} unit="ชม." sub="เฉลี่ยเวลาซ่อม" accentClass="border-l-cyan-500" />
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
+          <KpiCard icon={<BarChart3 className="h-5 w-5" />} label="งานทั้งหมด" value={kpi.total} sub="ทุกสถานะรวมกัน" accentClass="border-l-primary" />
+          <KpiCard icon={<AlertTriangle className="h-5 w-5 text-red-500" />} label="งานวิกฤติ" value={kpi.critical} sub="ต้องดำเนินการทันที" accentClass="border-l-red-500" pulse={kpi.critical > 0} />
+          <KpiCard icon={<Clock className="h-5 w-5 text-orange-500" />} label="ค้างเกิน 24 ชม." value={kpi.overdue} sub="ยังไม่เสร็จ" accentClass="border-l-orange-500" />
+          <KpiCard icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />} label="เสร็จสิ้นแล้ว" value={kpi.complete} sub={`${kpi.completionRate}% ของงาน`} accentClass="border-l-emerald-500" />
+          <KpiCard icon={<Package className="h-5 w-5 text-violet-500" />} label="รออะไหล่" value={kpi.waiting} sub="รอจัดซื้อ/จัดส่ง" accentClass="border-l-violet-500" />
+          <KpiCard icon={<TrendingUp className="h-5 w-5 text-cyan-600" />} label="MTTR (จำลอง)" value={`${kpi.mockMttr} ชม.`} sub="เฉลี่ยเวลาซ่อม" accentClass="border-l-cyan-500" />
         </div>
       </section>
 
@@ -384,176 +297,31 @@ function PipelineSection({
   urgentJobs: WorkRequest[];
   maxPipelineCount: number;
 }) {
-  const [viewMode, setViewMode] = useState<"bar" | "list">("bar");
-  const totalJobs = statusPipeline.reduce((acc, curr) => acc + curr.count, 0);
-  const activeJobs = statusPipeline.filter((s) => s.key !== "complete").reduce((acc, curr) => acc + curr.count, 0);
-
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8">
       {/* Pipeline */}
       <section>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <SectionTitle icon={<BarChart3 className="h-4 w-4" />} title="Status Pipeline — การไหลของงาน" />
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 p-1 bg-muted/80 rounded-lg border text-xs self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setViewMode("bar")}
-              className={cn(
-                "px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5",
-                viewMode === "bar"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span>กราฟแท่ง</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5",
-                viewMode === "list"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Activity className="h-3.5 w-3.5" />
-              <span>แถบแนวนอน</span>
-            </button>
-          </div>
-        </div>
-
-        <Card className="p-4 sm:p-6 shadow-sm border bg-card space-y-5">
-          {/* Header Summary Chips */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
-            <div>
-              <h3 className="font-semibold text-sm text-foreground">สถิติจำนวนงานในแต่ละขั้นตอน</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">ติดตามปริมาณงานคงค้างและขั้นตอนที่งานไหลผ่านตั้งแต่เปิดงานจนถึงเสร็จสิ้น</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-semibold">
-                งานทั้งหมด {totalJobs} รายการ
-              </span>
-              <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-700 font-semibold border border-amber-200">
-                กำลังดำเนินการ {activeJobs} รายการ
-              </span>
-            </div>
-          </div>
-
-          {viewMode === "bar" ? (
-            /* ── Bar Chart View ── */
-            <div className="w-full">
-              <div className="w-full overflow-x-auto pb-2">
-                <div className="min-w-[560px] h-[340px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={statusPipeline}
-                      margin={{ top: 25, right: 16, left: -16, bottom: 25 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(215 18% 90%)" />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 11, fontWeight: 500, fill: "hsl(215 28% 30%)" }}
-                        interval={0}
-                        tickLine={false}
-                        axisLine={{ stroke: "hsl(215 18% 85%)" }}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 11, fill: "hsl(215 14% 45%)" }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        content={<ChartTooltip />}
-                        cursor={{ fill: "hsl(215 20% 95% / 0.6)" }}
-                      />
-                      <Bar
-                        dataKey="count"
-                        name="จำนวนงาน"
-                        radius={[6, 6, 0, 0]}
-                        maxBarSize={48}
-                      >
-                        {statusPipeline.map((entry) => (
-                          <Cell
-                            key={entry.key}
-                            fill={STATUS_BAR_COLOR[entry.key] || "#3b82f6"}
-                          />
-                        ))}
-                        <LabelList
-                          dataKey="count"
-                          position="top"
-                          formatter={(val: number) => (val > 0 ? val : "")}
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            fill: "hsl(215 28% 25%)",
-                          }}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Status Summary Cards Grid below chart */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 pt-4 border-t mt-4">
-                {statusPipeline.map((s) => (
+        <SectionTitle icon={<ChevronRight className="h-4 w-4" />} title="Status Pipeline — การไหลของงาน" />
+        <Card className="p-5">
+          <div className="space-y-3">
+            {statusPipeline.map((s) => (
+              <div key={s.key} className="flex items-center gap-3">
+                <div className="w-32 shrink-0 text-xs font-medium text-right text-muted-foreground">{s.label}</div>
+                <div className="flex-1 bg-muted rounded-full h-7 overflow-hidden">
                   <div
-                    key={s.key}
-                    className="flex flex-col items-center justify-center p-2.5 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors border text-center"
+                    className="h-full rounded-full flex items-center justify-end pr-2 text-xs font-bold text-white transition-all duration-700"
+                    style={{
+                      width: `${Math.max((s.count / maxPipelineCount) * 100, s.count > 0 ? 6 : 0)}%`,
+                      backgroundColor: STATUS_BAR_COLOR[s.key],
+                    }}
                   >
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground truncate mb-1">
-                      <span
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: STATUS_BAR_COLOR[s.key] }}
-                      />
-                      <span className="truncate">{s.label}</span>
-                    </div>
-                    <span
-                      className="text-lg font-bold tabular-nums"
-                      style={{ color: s.count > 0 ? STATUS_BAR_COLOR[s.key] : undefined }}
-                    >
-                      {s.count}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* ── Progress Bar List View ── */
-            <div className="space-y-3.5">
-              {statusPipeline.map((s) => (
-                <div key={s.key} className="flex items-center gap-2.5 sm:gap-3">
-                  <div className="flex items-center gap-1.5 shrink-0 text-xs font-medium text-foreground w-28">
-                    <span
-                      className="h-2 w-2 rounded-full shrink-0"
-                      style={{ backgroundColor: STATUS_BAR_COLOR[s.key] }}
-                    />
-                    <span className="truncate">{s.label}</span>
-                  </div>
-                  <div className="flex-1 bg-muted/60 rounded-full h-6 sm:h-7 overflow-hidden">
-                    <div
-                      className="h-full rounded-full flex items-center justify-center sm:justify-end pr-0 sm:pr-2 text-xs font-bold text-white transition-all duration-700"
-                      style={{
-                        width: `${Math.max((s.count / maxPipelineCount) * 100, s.count > 0 ? 7 : 0)}%`,
-                        minWidth: s.count > 0 ? "24px" : "0px",
-                        backgroundColor: STATUS_BAR_COLOR[s.key],
-                      }}
-                    >
-                      {s.count > 0 && s.count}
-                    </div>
-                  </div>
-                  <div className={cn("w-6 sm:w-7 text-xs font-semibold tabular-nums text-right shrink-0", s.count === 0 && "text-muted-foreground")}>
-                    {s.count}
+                    {s.count > 0 && s.count}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className={cn("w-7 text-xs font-semibold tabular-nums text-right", s.count === 0 && "text-muted-foreground")}>{s.count}</div>
+              </div>
+            ))}
+          </div>
         </Card>
       </section>
 
@@ -597,6 +365,89 @@ function PipelineSection({
   );
 }
 
+function TeamSection({ techPerf, navigate }: { techPerf: ReturnType<typeof useTechPerf>; navigate: (p: string) => void }) {
+  return (
+    <div className="space-y-6">
+      <Card className="p-5">
+        <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">งานที่รับผิดชอบแต่ละคน</p>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart
+            data={techPerf.map((t) => ({ name: t.name, รับงาน: t.total, เสร็จ: t.done, ดำเนินการ: t.inProgress }))}
+            margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 18% 87%)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+            <Tooltip content={<ChartTooltip />} />
+            <Bar dataKey="รับงาน" fill="hsl(215 60% 40%)" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="เสร็จ" fill="hsl(142 65% 38%)" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="ดำเนินการ" fill="hsl(38 92% 50%)" radius={[3, 3, 0, 0]} />
+            <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {techPerf.map((tech) => {
+          const pct = tech.total > 0 ? Math.round((tech.done / tech.total) * 100) : 0;
+          return (
+            <Card key={tech.id} className="p-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-primary grid place-items-center text-primary-foreground font-bold text-sm shrink-0">
+                  {tech.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{tech.name}</p>
+                  <p className="text-xs text-muted-foreground">{tech.id}</p>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">อัตราปิดงาน</span>
+                  <span className="font-semibold">{pct}%</span>
+                </div>
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded-md bg-muted py-2">
+                  <p className="text-base font-bold tabular-nums">{tech.total}</p>
+                  <p className="text-muted-foreground">รับงาน</p>
+                </div>
+                <div className="rounded-md bg-emerald-50 py-2">
+                  <p className="text-base font-bold text-emerald-700 tabular-nums">{tech.done}</p>
+                  <p className="text-emerald-600">เสร็จ</p>
+                </div>
+                <div className="rounded-md bg-amber-50 py-2">
+                  <p className="text-base font-bold text-amber-700 tabular-nums">{tech.pending}</p>
+                  <p className="text-amber-600">ค้างงาน</p>
+                </div>
+              </div>
+              <button
+                className="w-full flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
+                onClick={() => navigate(`/admin/technician/${tech.id}`)}
+              >
+                ดูรายละเอียด <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-xl border bg-card gap-3 shadow-sm">
+        <div>
+          <p className="text-sm font-semibold">ประวัติและ Timeline การทำงานของช่างทั้งหมด</p>
+          <p className="text-xs text-muted-foreground">ดูรายงานการปิดงาน, เวลาที่ใช้ และอะไหล่ที่เบิกระดับช่างรายบุคคล</p>
+        </div>
+        <Button onClick={() => navigate("/admin/technician-history")} className="gap-1.5 shrink-0" size="sm">
+          <History className="h-4 w-4" /> ดูประวัติการทำงาน <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Custom hooks for data ────────────────────────────────────────────────────
 function useKpi(requests: WorkRequest[]) {
   return useMemo(() => {
@@ -617,7 +468,6 @@ function useTechPerf(requests: WorkRequest[]) {
       return {
         id: tech.technician_id,
         name: tech.name,
-        department: tech.department,
         total: mine.length,
         done: mine.filter((r) => r.status === "complete").length,
         inProgress: mine.filter((r) => r.status === "doing").length,
@@ -626,13 +476,8 @@ function useTechPerf(requests: WorkRequest[]) {
     }), [requests]);
 }
 
-function SpareSection({
-  navigate,
-  onNavigateNav,
-}: {
-  navigate: (p: string) => void;
-  onNavigateNav?: (key: NavKey) => void;
-}) {
+// ─── Spare Parts Summary Section ─────────────────────────────────────────────
+function SpareSection({ navigate }: { navigate: (p: string) => void }) {
   const parts = MOCK_SPARE_PARTS_EXTENDED;
   const transactions = MOCK_SPARE_PART_TRANSACTIONS;
   const out = parts.filter((p) => p.stock === 0).length;
@@ -712,22 +557,12 @@ function SpareSection({
               })}
             </div>
           )}
-          <div className="flex flex-col sm:flex-row gap-2.5 mt-4">
-            <Button
-              variant="outline"
-              className="w-full sm:flex-1 h-12 sm:h-10 text-sm font-semibold gap-2 shadow-sm border border-slate-300 bg-white text-slate-900 hover:bg-slate-100 hover:text-black active:scale-[0.98] transition-all"
-              style={{ color: "#0f172a" }}
-              onClick={() => navigate("/admin/spare-parts")}
-            >
-              <Package className="h-4 w-4 shrink-0" style={{ color: "#334155" }} />
-              <span className="font-semibold" style={{ color: "#0f172a" }}>ไปยังระบบจัดการอะไหล่</span>
-              <ArrowRight className="h-4 w-4 shrink-0" style={{ color: "#334155" }} />
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => navigate('/spare-parts')}>
+              ไปยังระบบจัดการอะไหล่ <ArrowRight className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              className="w-full sm:flex-1 h-12 sm:h-10 text-sm font-semibold gap-2 bg-amber-500 hover:bg-amber-600 text-white shadow-sm active:scale-[0.98] transition-all"
-              onClick={() => (onNavigateNav ? onNavigateNav("spare-requests") : navigate("/admin/spare-requests"))}
-            >
-              <ShieldAlert className="h-4 w-4" /> ดูคำขออะไหล่จากช่าง
+            <Button size="sm" className="flex-1 gap-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => navigate('/admin/spare-requests')}>
+              <ShieldAlert className="h-3.5 w-3.5" /> ดูคำขออะไหล่จากช่าง
             </Button>
           </div>
         </Card>
@@ -801,15 +636,8 @@ function ChecksheetSection({ navigate }: { navigate: (p: string) => void }) {
               </div>
             ))}
           </div>
-          <Button
-            variant="outline"
-            className="w-full mt-4 gap-1.5 h-11 sm:h-10 text-xs sm:text-sm font-semibold border border-slate-300 bg-white text-slate-900 hover:bg-slate-100 hover:text-black active:scale-[0.98] transition-all shadow-sm"
-            style={{ color: "#0f172a" }}
-            onClick={() => navigate('/admin/checksheet')}
-          >
-            <ClipboardList className="h-4 w-4 shrink-0" style={{ color: "#334155" }} />
-            <span className="font-semibold" style={{ color: "#0f172a" }}>ไปยังระบบเช็คชีท</span>
-            <ArrowRight className="h-3.5 w-3.5 shrink-0" style={{ color: "#334155" }} />
+          <Button variant="outline" size="sm" className="w-full mt-4 gap-1" onClick={() => navigate('/checksheet')}>
+            ไปยังระบบเช็คชีท <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </Card>
       </section>
@@ -817,81 +645,12 @@ function ChecksheetSection({ navigate }: { navigate: (p: string) => void }) {
   );
 }
 
-interface AdminDashboardProps {
-  defaultTab?: NavKey;
-}
-
-const VALID_TABS: NavKey[] = [
-  "overview",
-  "pipeline",
-  "team",
-  "spare",
-  "checksheet",
-  "spare-requests",
-  "technician-history",
-];
-
-export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {}) {
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function AdminDashboard() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const params = useParams<{ id?: string }>();
-  const [searchParams] = useSearchParams();
   const requests = useRequests();
-
-  const isTechDetail = Boolean(params.id) || location.pathname.startsWith("/admin/technician/");
-  const techId = params.id || (isTechDetail ? location.pathname.split("/admin/technician/")[1]?.split("/")[0] : undefined);
-  const isChecksheetSystem =
-    location.pathname === "/checksheet" ||
-    location.pathname === "/admin/checksheet" ||
-    searchParams.get("view") === "checksheet";
-
-  const getInitialTab = (): NavKey => {
-    if (isChecksheetSystem) return "checksheet";
-    if (isTechDetail) {
-      if (location.state?.from === "team") return "team";
-      return "technician-history";
-    }
-    if (defaultTab && VALID_TABS.includes(defaultTab)) return defaultTab;
-    if (location.pathname === "/admin/spare-requests") return "spare-requests";
-    if (location.pathname === "/admin/technician-history") return "technician-history";
-    const tabParam = searchParams.get("tab") as NavKey | null;
-    if (tabParam && VALID_TABS.includes(tabParam)) return tabParam;
-    return "overview";
-  };
-
-  const [activeNav, setActiveNav] = useState<NavKey>(getInitialTab);
+  const [activeNav, setActiveNav] = useState<NavKey>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    const current = getInitialTab();
-    setActiveNav(current);
-  }, [location.pathname, searchParams, defaultTab, isTechDetail, isChecksheetSystem]);
-
-  const handleNavSelect = (key: NavKey) => {
-    setActiveNav(key);
-    setSidebarOpen(false);
-    if (key === "spare-requests") {
-      navigate("/admin/spare-requests", { replace: true });
-    } else if (key === "technician-history") {
-      navigate("/admin/technician-history", { replace: true });
-    } else if (key === "overview") {
-      navigate("/admin/dashboard", { replace: true });
-    } else {
-      navigate(`/admin/dashboard?tab=${key}`, { replace: true });
-    }
-  };
-
-  const handleTechDetailBack = () => {
-    if (location.state?.from === "team") {
-      navigate("/admin/dashboard?tab=team");
-    } else {
-      navigate("/admin/technician-history");
-    }
-  };
-
-  const handleChecksheetBack = () => {
-    navigate("/admin/dashboard?tab=checksheet");
-  };
 
   const kpi = useKpi(requests);
   const techPerf = useTechPerf(requests);
@@ -928,12 +687,12 @@ export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {})
 
   const maxPipelineCount = Math.max(...statusPipeline.map((s) => s.count), 1);
 
-  const activeNavItem = NAV_ITEMS.find((n) => n.key === activeNav) || NAV_ITEMS[0];
+  const activeNavItem = NAV_ITEMS.find((n) => n.key === activeNav)!;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* ── Top Header ─────────────────────────────────────────────────────── */}
-      <header className="shrink-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
+      <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
         <div className="px-4 py-3 flex items-center gap-3">
           {/* Mobile sidebar toggle */}
           <Button
@@ -966,16 +725,20 @@ export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {})
               ทั้งหมด {kpi.total} งาน
             </span>
           </div>
+
+          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/")} aria-label="ออกจากระบบ">
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
 
       {/* ── Body: Sidebar + Content ──────────────────────────────────────────── */}
-      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative">
 
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -983,86 +746,75 @@ export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {})
         {/* ── Sidebar ──────────────────────────────────────────────────────── */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 lg:static lg:z-auto",
-            "w-64 h-full shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border shadow-2xl lg:shadow-none",
-            "transition-transform duration-300 ease-in-out",
+            "fixed lg:sticky top-[57px] z-20 h-[calc(100vh-57px)] w-64 shrink-0",
+            "flex flex-col bg-sidebar transition-transform duration-300 ease-in-out",
+            "border-r border-sidebar-border",
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           )}
         >
           {/* User card */}
-          <div className="p-4 border-b border-sidebar-border shrink-0 flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="p-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-secondary grid place-items-center text-secondary-foreground font-bold text-sm shrink-0">
                 ผ
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-sidebar-foreground truncate">ผู้จัดการฝ่ายซ่อมบำรุง</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">ADMIN001 · Management</p>
+                <p className="text-xs text-sidebar-foreground/60">ADMIN001 · Management</p>
               </div>
             </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground p-1 shrink-0"
-              aria-label="ปิดเมนู"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 min-h-0 p-3 space-y-3 overflow-y-auto">
-            {ADMIN_NAV_GROUPS.map((group, groupIdx) => (
-              <div key={group.title} className={cn("space-y-1", groupIdx > 0 && "pt-2.5 border-t border-sidebar-border/40")}>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/50 px-3 py-1 flex items-center gap-1.5">
-                  <span className="shrink-0">{group.icon}</span>
-                  <span>{group.title}</span>
-                </p>
-                {group.items.map((item) => {
-                  const isActive = activeNav === item.key;
-                  const pendingBadge = item.key === "spare-requests" ? MOCK_SPARE_PART_REQUESTS.filter(r => r.status === "pending").length : 0;
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => handleNavSelect(item.key)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150",
-                        isActive
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm font-semibold"
-                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-3 py-2">
+              เมนูหลัก
+            </p>
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeNav === item.key;
+              const pendingBadge = item.key === "spare-requests" ? MOCK_SPARE_PART_REQUESTS.filter(r => r.status === "pending").length : 0;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => {
+                    if (item.href) {
+                      navigate(item.href);
+                    } else {
+                      setActiveNav(item.key);
+                    }
+                    setSidebarOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <span className={cn("shrink-0", isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/60")}>
+                    {item.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">{item.label}</p>
+                      {pendingBadge > 0 && (
+                        <span className="bg-amber-500 text-white rounded-full text-[10px] font-bold px-1.5 py-0.2">
+                          {pendingBadge}
+                        </span>
                       )}
-                    >
-                      <span className={cn("shrink-0", isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/60")}>
-                        {item.icon}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">{item.label}</p>
-                          {pendingBadge > 0 && (
-                            <span
-                              className={cn(
-                                "min-w-5 h-5 px-1 rounded-full text-[11px] font-bold font-sans leading-none pb-0.5 pl-px flex items-center justify-center select-none tabular-nums shadow-sm transition-all",
-                                isActive
-                                  ? "bg-red-500 text-white ring-2 ring-white"
-                                  : "bg-red-500 text-white ring-1 ring-white/20"
-                              )}
-                            >
-                              {pendingBadge}
-                            </span>
-                          )}
-                        </div>
-                        <p className={cn("text-[11px] truncate", isActive ? "text-sidebar-primary-foreground/70" : "text-sidebar-foreground/50")}>
-                          {item.sublabel}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+                    </div>
+                    <p className={cn("text-[11px] truncate", isActive ? "text-sidebar-primary-foreground/70" : "text-sidebar-foreground/50")}>
+                      {item.sublabel}
+                    </p>
+                  </div>
+                  {isActive && <ChevronRight className="h-4 w-4 ml-auto shrink-0" />}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Mini KPI summary at bottom */}
-          <div className="p-3 border-t border-sidebar-border space-y-2 shrink-0">
+          <div className="p-3 border-t border-sidebar-border space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-1">สรุปด่วน</p>
             {[
               { label: "งานทั้งหมด", value: kpi.total, dot: "bg-primary" },
@@ -1081,7 +833,7 @@ export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {})
           </div>
 
           {/* Logout */}
-          <div className="p-3 border-t border-sidebar-border shrink-0">
+          <div className="p-3 border-t border-sidebar-border">
             <button
               onClick={() => navigate("/")}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm"
@@ -1093,106 +845,26 @@ export default function AdminDashboard({ defaultTab }: AdminDashboardProps = {})
         </aside>
 
         {/* ── Main Content ─────────────────────────────────────────────────── */}
-        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto min-w-0">
           {/* Page title bar */}
-          {!isTechDetail && (
-            <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                {isChecksheetSystem ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleChecksheetBack}
-                      className="gap-1.5 -ml-1 sm:-ml-2 text-xs font-medium text-muted-foreground hover:text-foreground h-9 px-2.5 sm:px-3 shrink-0"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                      ย้อนกลับ
-                    </Button>
-                    <div className="h-4 w-px bg-border shrink-0" />
-                    <div className="h-6 w-6 rounded grid place-items-center text-primary shrink-0">
-                      <ClipboardList className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="font-semibold text-sm leading-none truncate">
-                        ระบบเช็คชีท
-                      </h2>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        จัดการ Template & บันทึกการตรวจสอบ
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="h-6 w-6 rounded grid place-items-center text-primary shrink-0">{activeNavItem.icon}</div>
-                    <div className="min-w-0">
-                      <h2 className="font-semibold text-sm leading-none truncate">{activeNavItem.label}</h2>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{activeNavItem.sublabel}</p>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Right-side summary stat pills for Team tab */}
-              {activeNav === "team" && (
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="bg-card rounded-lg border border-border px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-2 sm:gap-2.5 shadow-2xs">
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                      <Users className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground font-medium leading-none">ช่างทั้งหมด</p>
-                      <p className="text-xs font-bold text-foreground tabular-nums leading-tight mt-0.5">24 คน</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-card rounded-lg border border-border px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-2 sm:gap-2.5 shadow-2xs">
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                      <Briefcase className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground font-medium leading-none">งานทั้งหมด</p>
-                      <p className="text-xs font-bold text-foreground tabular-nums leading-tight mt-0.5">42 งาน</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+          <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b px-6 py-3 flex items-center gap-2">
+            <div className="h-6 w-6 rounded grid place-items-center text-primary">{activeNavItem.icon}</div>
+            <div>
+              <h2 className="font-semibold text-sm leading-none">{activeNavItem.label}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{activeNavItem.sublabel}</p>
             </div>
-          )}
+          </div>
 
-          <div className="p-3.5 sm:p-5 lg:p-6 animate-slide-up">
-            {isChecksheetSystem ? (
-              <Checksheet
-                embedded
-                onBack={handleChecksheetBack}
-              />
-            ) : isTechDetail && techId ? (
-              <TechnicianDetail
-                embedded
-                id={techId}
-                onBack={handleTechDetailBack}
-              />
-            ) : (
-              <>
-                {activeNav === "overview" && (
-                  <OverviewSection kpi={kpi} categoryData={categoryData} priorityData={priorityData} />
-                )}
-                {activeNav === "pipeline" && (
-                  <PipelineSection statusPipeline={statusPipeline} urgentJobs={urgentJobs} maxPipelineCount={maxPipelineCount} />
-                )}
-                {activeNav === "team" && (
-                  <TeamSection
-                    onViewDetail={(techId) =>
-                      navigate(`/admin/technician/${techId}`, { state: { from: "team" } })
-                    }
-                  />
-                )}
-                {activeNav === "spare" && <SpareSection navigate={navigate} onNavigateNav={handleNavSelect} />}
-                {activeNav === "checksheet" && <ChecksheetSection navigate={navigate} />}
-                {activeNav === "spare-requests" && <AdminSpareRequests embedded />}
-                {activeNav === "technician-history" && <TechnicianHistory embedded />}
-              </>
+          <div className="p-6 animate-slide-up">
+            {activeNav === "overview" && (
+              <OverviewSection kpi={kpi} categoryData={categoryData} priorityData={priorityData} />
             )}
+            {activeNav === "pipeline" && (
+              <PipelineSection statusPipeline={statusPipeline} urgentJobs={urgentJobs} maxPipelineCount={maxPipelineCount} />
+            )}
+            {activeNav === "team" && <TeamSection techPerf={techPerf} navigate={navigate} />}
+            {activeNav === "spare" && <SpareSection navigate={navigate} />}
+            {activeNav === "checksheet" && <ChecksheetSection navigate={navigate} />}
           </div>
         </main>
       </div>

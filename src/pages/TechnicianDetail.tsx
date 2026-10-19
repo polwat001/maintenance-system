@@ -1,870 +1,361 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeft, Search, Bell, Phone, Mail, Building2, Calendar,
-  Wrench, Snowflake, Plug, ClipboardCheck, Shield, Edit3,
-  ClipboardList, Clock, StickyNote, Eye, ChevronLeft, ChevronRight,
-  Plus, CheckCircle2, AlertCircle
+  ArrowLeft, Wrench, Package, CheckCircle2, Clock, AlertTriangle,
+  BarChart3, LogOut, Activity, Star, TrendingUp, Calendar, History,
 } from "lucide-react";
-import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell,
+} from "recharts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  MOCK_TEAM_TECHNICIANS,
-  getTechnicianJobs,
-  TechnicianJobItem,
-  TeamTechnician,
-} from "@/lib/teamMockData";
-import { toast } from "sonner";
+  TECHNICIAN_MAP,
+  MOCK_SPARE_PART_REQUESTS,
+  STATUS_LABEL,
+  CATEGORY_LABEL,
+  WorkRequest,
+  timeAgo,
+} from "@/lib/mockData";
+import { useRequests } from "@/lib/requestStore";
 
-interface TechnicianDetailProps {
-  embedded?: boolean;
-  id?: string;
-  onBack?: () => void;
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+type Tab = "jobs" | "spares" | "done" | "kpi";
+
+const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+  { key: "jobs",   label: "งานที่รับ",       icon: <Wrench className="h-4 w-4" /> },
+  { key: "spares", label: "งานที่ขออะไหล่",   icon: <Package className="h-4 w-4" /> },
+  { key: "done",   label: "งานที่เสร็จแล้ว",  icon: <CheckCircle2 className="h-4 w-4" /> },
+  { key: "kpi",    label: "ประสิทธิภาพ",      icon: <BarChart3 className="h-4 w-4" /> },
+];
+
+// ─── Status pill ──────────────────────────────────────────────────────────────
+
+function StatusPill({ status }: { status: WorkRequest["status"] }) {
+  const cls: Record<string, string> = {
+    open: "bg-sky-100 text-sky-700", assess: "bg-amber-100 text-amber-700",
+    waiting: "bg-rose-100 text-rose-700", doing: "bg-cyan-100 text-cyan-700",
+    done: "bg-orange-100 text-orange-700", qc1: "bg-violet-100 text-violet-700",
+    qc2: "bg-fuchsia-100 text-fuchsia-700", complete: "bg-emerald-100 text-emerald-700",
+  };
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", cls[status])}>
+      {STATUS_LABEL[status]}
+    </span>
+  );
 }
 
-// Male technician avatar illustration matching Image 2
-function TechnicianAvatarIllustration({ className = "w-20 h-20" }: { className?: string }) {
+// ─── Job Row ──────────────────────────────────────────────────────────────────
+
+function JobRow({ req, showDuration = false }: { req: WorkRequest; showDuration?: boolean }) {
+  const spares = MOCK_SPARE_PART_REQUESTS.filter((sr) => sr.request_id === req.request_id);
+  const duration = req.status === "complete" ? (req.priority === "critical" ? 4.2 : req.priority === "high" ? 2.5 : 1.5) : 0;
   return (
-    <div className={cn("relative rounded-full overflow-hidden bg-sky-50 border-2 border-sky-100 flex items-center justify-center shrink-0 shadow-xs", className)}>
-      <svg viewBox="0 0 100 100" className="w-full h-full">
-        {/* Background circle */}
-        <circle cx="50" cy="50" r="48" fill="#EBF4FE" />
-        {/* Hair back */}
-        <path d="M26 44 C26 22 38 15 50 15 C62 15 74 22 74 44 Z" fill="#1E293B" />
-        {/* Neck */}
-        <rect x="44" y="56" width="12" height="15" fill="#F8CBA6" />
-        {/* Face */}
-        <ellipse cx="50" cy="46" rx="19" ry="20" fill="#FDD9B5" />
-        {/* Hair front/bangs */}
-        <path d="M29 37 C33 24 44 20 52 20 C62 20 70 26 71 34 C66 31 59 32 54 35 C48 33 39 34 29 37 Z" fill="#1E293B" />
-        {/* Sideburns */}
-        <path d="M30 40 L32 47 L35 44 Z" fill="#1E293B" />
-        <path d="M70 40 L68 47 L65 44 Z" fill="#1E293B" />
-        {/* Ears */}
-        <circle cx="31" cy="47" r="3.5" fill="#F8CBA6" />
-        <circle cx="69" cy="47" r="3.5" fill="#F8CBA6" />
-        {/* Eyes */}
-        <ellipse cx="43" cy="45" rx="2" ry="2.2" fill="#1E293B" />
-        <ellipse cx="57" cy="45" rx="2" ry="2.2" fill="#1E293B" />
-        {/* Eyebrows */}
-        <path d="M39 41 Q43 39 47 41" stroke="#1E293B" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-        <path d="M53 41 Q57 39 61 41" stroke="#1E293B" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-        {/* Nose */}
-        <path d="M50 46 L49 50 L52 50" stroke="#E29D7C" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        {/* Smile */}
-        <path d="M45 54 Q50 58 55 54" stroke="#B45309" strokeWidth="1.4" strokeLinecap="round" fill="none" />
-        {/* Shirt (Blue technician service uniform) */}
-        <path d="M20 100 C22 75 33 68 50 68 C67 68 78 75 80 100 Z" fill="#2563EB" />
-        {/* Collar & Inner Shirt */}
-        <path d="M41 68 L50 82 L59 68 L50 73 Z" fill="#1D4ED8" />
-        <path d="M36 68 L46 77 L43 68 Z" fill="#3B82F6" />
-        <path d="M64 68 L54 77 L57 68 Z" fill="#3B82F6" />
-        {/* Shirt pocket line / seam */}
-        <path d="M32 82 L40 82" stroke="#1D4ED8" strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
+    <div className="flex items-start gap-3 py-3 border-b last:border-0">
+      <div className="h-8 w-8 rounded-lg bg-muted grid place-items-center shrink-0 mt-0.5">
+        <Wrench className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+          <p className="font-mono text-xs text-primary">{req.request_id}</p>
+          <StatusPill status={req.status} />
+          {showDuration && duration > 0 && (
+            <span className="flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-xs font-semibold">
+              <Clock className="h-3 w-3" /> เวลาที่ใช้ {duration} ชม.
+            </span>
+          )}
+        </div>
+        <p className="text-sm font-medium truncate">{req.asset_name} — {req.issue_summary}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{req.asset_location} · {timeAgo(req.reported_time)}</p>
+        {spares.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> อะไหล่:</span>
+            {spares.map((sp) => (
+              <span key={sp.sr_id} className="text-[11px] bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.2">
+                {sp.part_name} ({sp.quantity} {sp.unit})
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-export default function TechnicianDetail({
-  embedded = false,
-  id: propId,
-  onBack,
-}: TechnicianDetailProps = {}) {
-  const params = useParams<{ id: string }>();
-  const navigate = useNavigate();
+// ─── KPI Section ──────────────────────────────────────────────────────────────
 
-  // Determine current technician ID (default to TECH004 if not matched)
-  const currentId = propId || params.id || "TECH004";
-  const tech: TeamTechnician = useMemo(() => {
-    return MOCK_TEAM_TECHNICIANS.find((t) => t.id === currentId) || MOCK_TEAM_TECHNICIANS[2]; // fallback to Anont
-  }, [currentId]);
+function KpiSection({ requests, techId }: { requests: WorkRequest[]; techId: string }) {
+  const mine = requests.filter((r) => r.assigned_to === techId);
+  const done = mine.filter((r) => r.status === "complete").length;
+  const total = mine.length;
+  const inProgress = mine.filter((r) => r.status === "doing").length;
+  const pending = mine.filter((r) => ["open", "assess", "waiting"].includes(r.status)).length;
+  const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  // Load jobs for this technician
-  const jobs: TechnicianJobItem[] = useMemo(() => {
-    return getTechnicianJobs(tech.id);
-  }, [tech.id]);
+  const categoryBreakdown = Object.entries(
+    mine.reduce((acc, r) => {
+      acc[r.category] = (acc[r.category] ?? 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([cat, count]) => ({ name: (CATEGORY_LABEL as Record<string, string>)[cat] ?? cat, count }));
 
-  // Table filters & search
-  const [jobSearch, setJobSearch] = useState("");
-  const [jobStatusFilter, setJobStatusFilter] = useState("all");
-  const [jobSort, setJobSort] = useState("latest");
-  const [tablePage, setTablePage] = useState(1);
-  const [notes, setNotes] = useState<string[]>([]);
-  const [isAddNoteOpen, setIsAddNoteOpen] = useState(false);
-  const [newNote, setNewNote] = useState("");
-
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      navigate("/admin/dashboard?tab=team");
-    }
-  };
-
-  // Filtered jobs for the table
-  const filteredJobs = useMemo(() => {
-    return jobs.filter((j) => {
-      const matchSearch =
-        jobSearch === "" ||
-        j.id.toLowerCase().includes(jobSearch.toLowerCase()) ||
-        j.clientOrLocation.toLowerCase().includes(jobSearch.toLowerCase()) ||
-        j.detail.toLowerCase().includes(jobSearch.toLowerCase());
-
-      const matchStatus =
-        jobStatusFilter === "all" || j.status === jobStatusFilter;
-
-      return matchSearch && matchStatus;
-    });
-  }, [jobs, jobSearch, jobStatusFilter]);
-
-  // For Anont in Image 2, the total is exactly 6 jobs (2 assigned, 1 done, 3 inProgress)
-  const assignedCount = tech.id === "TECH004" ? 2 : tech.jobsStats.assigned;
-  const doneCount = tech.id === "TECH004" ? 1 : tech.jobsStats.done;
-  const inProgressCount = tech.id === "TECH004" ? 3 : tech.jobsStats.inProgress;
-  const totalCount = assignedCount + doneCount + inProgressCount; // 6 for Anont
-
-  const assignedPct = ((assignedCount / totalCount) * 100).toFixed(1);
-  const donePct = ((doneCount / totalCount) * 100).toFixed(1);
-  const inProgressPct = ((inProgressCount / totalCount) * 100).toFixed(1);
-
-  // Category breakdown for Anont: General Repair 3, HVAC 2, Installation 1, Inspection 0
-  const catStats = tech.categoryStats;
-  const maxCat = Math.max(catStats.generalRepair, catStats.hvac, catStats.installation, catStats.inspection, 1);
-
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
-    setNotes((prev) => [...prev, newNote.trim()]);
-    setNewNote("");
-    setIsAddNoteOpen(false);
-    toast.success("เพิ่มหมายเหตุเรียบร้อยแล้ว");
-  };
+  const statusBreakdown = [
+    { name: "กำลังดำเนินการ", value: inProgress, fill: "#22d3ee" },
+    { name: "ค้างงาน", value: pending, fill: "#f59e0b" },
+    { name: "เสร็จสิ้น", value: done, fill: "#10b981" },
+  ];
 
   return (
-    <div className="space-y-4 sm:space-y-5 animate-slide-up pb-8">
-      {/* ── Top Navigation Bar ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Back Link */}
-        <button
-          onClick={handleBack}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors w-fit group py-1"
-        >
-          <ArrowLeft className="h-4 w-4 text-slate-500 group-hover:text-blue-600 group-hover:-translate-x-0.5 transition-transform" />
-          <span>กลับไปยังรายชื่อช่างทั้งหมด</span>
-        </button>
+    <div className="space-y-6">
+      {/* KPI Mini */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "งานทั้งหมด", value: total, dot: "bg-primary" },
+          { label: "เสร็จสิ้น", value: done, dot: "bg-emerald-500" },
+          { label: "กำลังดำเนินการ", value: inProgress, dot: "bg-cyan-500" },
+          { label: "ค้างงาน", value: pending, dot: "bg-amber-500" },
+        ].map((k) => (
+          <Card key={k.label} className="p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <span className={cn("h-2 w-2 rounded-full", k.dot)} />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{k.label}</p>
+            </div>
+            <p className="text-2xl font-bold tabular-nums">{k.value}</p>
+          </Card>
+        ))}
+      </div>
 
-        {/* Top Right Controls (Search, Bell, SA avatar) */}
-        <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-52 sm:flex-initial">
-            <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="ค้นหาช่าง..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-input bg-card focus:bg-background focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors shadow-2xs"
-            />
+      {/* Completion bar */}
+      <Card className="p-5">
+        <div className="flex justify-between items-center text-sm mb-2">
+          <span className="font-medium">อัตราปิดงาน</span>
+          <span className="font-bold text-emerald-600">{completionRate}%</span>
+        </div>
+        <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+          <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${completionRate}%` }} />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1.5">MTTR จำลอง: <strong>3.2 ชั่วโมง</strong></p>
+      </Card>
+
+      {/* Category chart */}
+      <Card className="p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">งานแยกตามหมวดหมู่</p>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={categoryBreakdown} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 18% 87%)" />
+            <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="count" fill="hsl(215 60% 40%)" radius={[4, 4, 0, 0]} name="งาน" />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {/* Status breakdown */}
+      <Card className="p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">สถานะงานปัจจุบัน</p>
+        <div className="space-y-2.5">
+          {statusBreakdown.map((s) => (
+            <div key={s.name} className="flex items-center gap-3">
+              <div className="w-28 shrink-0 text-xs text-right text-muted-foreground">{s.name}</div>
+              <div className="flex-1 bg-muted rounded-full h-6 overflow-hidden">
+                <div
+                  className="h-full rounded-full flex items-center justify-end pr-2 text-xs font-bold text-white transition-all"
+                  style={{ width: `${total > 0 ? Math.max((s.value / total) * 100, s.value > 0 ? 8 : 0) : 0}%`, backgroundColor: s.fill }}
+                >
+                  {s.value > 0 && s.value}
+                </div>
+              </div>
+              <div className="w-6 text-xs text-right font-semibold tabular-nums">{s.value}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+
+export default function TechnicianDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const requests = useRequests();
+  const [activeTab, setActiveTab] = useState<Tab>("jobs");
+
+  const tech = id ? TECHNICIAN_MAP[id] : undefined;
+  if (!tech) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <AlertTriangle className="h-12 w-12 text-amber-400" />
+        <p className="text-lg font-semibold">ไม่พบข้อมูลช่าง</p>
+        <Button onClick={() => navigate("/admin/dashboard")}>กลับ Dashboard</Button>
+      </div>
+    );
+  }
+
+  const mine = requests.filter((r) => r.assigned_to === tech.technician_id);
+  const doneJobs = mine.filter((r) => r.status === "complete");
+  const activeJobs = mine.filter((r) => r.status !== "complete");
+  const mySpareRequests = MOCK_SPARE_PART_REQUESTS.filter(
+    (sr) => sr.requested_by === tech.technician_id
+  );
+
+  const completionRate = mine.length > 0 ? Math.round((doneJobs.length / mine.length) * 100) : 0;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/admin/dashboard")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="h-10 w-10 rounded-full bg-secondary grid place-items-center text-secondary-foreground font-bold shrink-0">
+            {tech.name.charAt(0)}
           </div>
-
-          <div className="relative shrink-0">
-            <button
-              className="w-8 h-8 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-2xs"
-              aria-label="การแจ้งเตือน"
-            >
-              <Bell className="h-4 w-4" />
-            </button>
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-              3
+          <div className="flex-1 min-w-0">
+            <div className="text-xs uppercase tracking-wider text-primary-foreground/70">รายละเอียดช่าง · {tech.technician_id}</div>
+            <h1 className="font-bold truncate">{tech.name}</h1>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium">{tech.department}</span>
+            <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 text-xs font-semibold">
+              ปิดงาน {completionRate}%
             </span>
           </div>
-
-          <div className="h-8 w-8 rounded-full bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs grid place-items-center cursor-pointer shadow-2xs shrink-0">
-            SA
-          </div>
-        </div>
-      </div>
-
-      {/* ── Top Profile Row: Profile Card (Left) + Total Jobs Card (Right) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Profile Card (~68% width -> 8 cols on lg) */}
-        <Card className="lg:col-span-8 p-4 sm:p-5 lg:p-6 shadow-xs border border-border">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6">
-            {/* Left Sub-Column: Avatar, Name, Badges, Contacts */}
-            <div className="md:col-span-6 flex flex-col justify-between space-y-3.5 sm:space-y-4">
-              <div className="flex items-start gap-3 sm:gap-3.5">
-                <TechnicianAvatarIllustration className="w-16 h-16 sm:w-20 sm:h-20 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                    <h2 className="text-base sm:text-xl font-bold text-foreground">
-                      {tech.name}
-                    </h2>
-                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full font-semibold shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> ออนไลน์
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
-                    <span className="text-xs text-muted-foreground font-medium">
-                      {tech.role}
-                    </span>
-                    {tech.tag && (
-                      <span className="text-[10px] sm:text-[11px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md shrink-0">
-                        {tech.tag}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact list */}
-              <div className="space-y-1.5 text-xs text-muted-foreground pt-1">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="text-slate-500 w-14 shrink-0">เบอร์โทร</span>
-                  <strong className="text-foreground font-medium">{tech.phone}</strong>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="text-slate-500 w-14 shrink-0">อีเมล</span>
-                  <strong className="text-foreground font-medium truncate">{tech.email}</strong>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="text-slate-500 w-14 shrink-0">แผนก</span>
-                  <strong className="text-foreground font-medium truncate">{tech.department}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Sub-Column: Experience / Skills & Start Date */}
-            <div className="md:col-span-6 border-t md:border-t-0 md:border-l border-border/80 pt-3.5 md:pt-0 md:pl-6 flex flex-col justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-foreground mb-2">
-                  ประสบการณ์ / ความเชี่ยวชาญ
-                </h4>
-                <ul className="space-y-1.5 text-xs text-muted-foreground">
-                  {tech.skills.map((skill) => (
-                    <li key={skill} className="flex items-start gap-1.5">
-                      <span className="text-slate-400 shrink-0">•</span>
-                      <span>{skill}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Joined Date */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-3 mt-2 border-t border-border/60">
-                <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                <span>
-                  เข้าทำงานเมื่อ <strong>{tech.startDate}</strong> ({tech.experienceYears})
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Right Total Jobs Card (~32% width -> 4 cols on lg) */}
-        <Card className="lg:col-span-4 p-4 sm:p-5 lg:p-6 shadow-xs border border-border flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row lg:flex-col sm:items-center lg:items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center lg:mb-3 shadow-2xs shrink-0">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">จำนวนงานทั้งหมด</p>
-                <p className="text-2xl sm:text-3xl font-black text-foreground lg:mt-1 tabular-nums">
-                  {totalCount} งาน
-                </p>
-              </div>
-            </div>
-
-            {/* Bottom 3-Column Mini Stats */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-2 pt-3 sm:pt-0 lg:pt-4 border-t sm:border-t-0 lg:border-t border-border/80 text-center w-full sm:w-auto lg:w-full">
-              <div className="bg-slate-50 dark:bg-slate-800/50 sm:bg-transparent p-2 sm:p-0 rounded-lg">
-                <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
-                  <span className="w-2 h-2 rounded-full bg-blue-600" />
-                  <span>รับงาน</span>
-                </div>
-                <p className="text-base sm:text-lg font-bold text-foreground mt-0.5 tabular-nums">{assignedCount}</p>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-800/50 sm:bg-transparent p-2 sm:p-0 rounded-lg">
-                <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>เสร็จสิ้น</span>
-                </div>
-                <p className="text-base sm:text-lg font-bold text-foreground mt-0.5 tabular-nums">{doneCount}</p>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-800/50 sm:bg-transparent p-2 sm:p-0 rounded-lg">
-                <div className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>ดำเนินการ</span>
-                </div>
-                <p className="text-base sm:text-lg font-bold text-foreground mt-0.5 tabular-nums">{inProgressCount}</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* ── Middle Row: 3 Cards (สัดส่วนสถานะงาน + งานตามหมวดหมู่ + ข้อมูลเพิ่มเติม) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-        {/* Card 1: สัดส่วนสถานะงาน (Donut Chart, ~28% -> 4 cols) */}
-        <Card className="md:col-span-1 lg:col-span-4 p-4 sm:p-5 shadow-xs border border-border flex flex-col justify-between">
-          <h3 className="font-bold text-xs text-foreground mb-1">สัดส่วนสถานะงาน</h3>
-
-          <div className="flex items-center justify-between gap-2 py-2">
-            {/* Donut Chart with Center Text */}
-            <div className="relative w-[130px] h-[130px] shrink-0 flex items-center justify-center">
-              <PieChart width={130} height={130}>
-                <Pie
-                  data={[
-                    { name: "รับงาน", value: assignedCount, color: "#2563eb" },
-                    { name: "เสร็จสิ้น", value: doneCount, color: "#10b981" },
-                    { name: "ดำเนินการ", value: inProgressCount, color: "#f59e0b" },
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={36}
-                  outerRadius={52}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  <Cell fill="#2563eb" />
-                  <Cell fill="#10b981" />
-                  <Cell fill="#f59e0b" />
-                </Pie>
-              </PieChart>
-
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-lg font-black text-foreground tabular-nums leading-none">
-                  {totalCount}
-                </span>
-                <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
-                  งานทั้งหมด
-                </span>
-              </div>
-            </div>
-
-            {/* Legend list on right */}
-            <div className="space-y-2 text-xs flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                  <span className="text-muted-foreground text-[11px]">รับงาน</span>
-                </div>
-                <strong className="text-foreground text-[11px] tabular-nums">{assignedCount} ({assignedPct}%)</strong>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-muted-foreground text-[11px]">เสร็จสิ้น</span>
-                </div>
-                <strong className="text-foreground text-[11px] tabular-nums">{doneCount} ({donePct}%)</strong>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                  <span className="text-muted-foreground text-[11px]">ดำเนินการ</span>
-                </div>
-                <strong className="text-foreground text-[11px] tabular-nums">{inProgressCount} ({inProgressPct}%)</strong>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Card 2: งานที่รับผิดชอบตามหมวดหมู่ (Horizontal Bars, ~42% -> 5 cols) */}
-        <Card className="md:col-span-1 lg:col-span-5 p-4 sm:p-5 shadow-xs border border-border flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-blue-600 text-xs font-bold">✧</span>
-            <h3 className="font-bold text-xs text-foreground">งานที่รับผิดชอบตามหมวดหมู่</h3>
-          </div>
-
-          <div className="space-y-2.5 my-auto">
-            {/* งานซ่อมทั่วไป */}
-            <div className="flex items-center gap-2.5 sm:gap-3 text-xs">
-              <div className="flex items-center gap-1.5 sm:gap-2 w-32 sm:w-36 shrink-0 text-muted-foreground">
-                <Wrench className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                <span className="truncate">งานซ่อมทั่วไป</span>
-              </div>
-              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${(catStats.generalRepair / maxCat) * 100}%` }}
-                />
-              </div>
-              <span className="w-4 text-right font-bold text-foreground tabular-nums">
-                {catStats.generalRepair}
-              </span>
-            </div>
-
-            {/* ระบบปรับอากาศ (HVAC) */}
-            <div className="flex items-center gap-2.5 sm:gap-3 text-xs">
-              <div className="flex items-center gap-1.5 sm:gap-2 w-32 sm:w-36 shrink-0 text-muted-foreground">
-                <Snowflake className="h-3.5 w-3.5 text-sky-500 shrink-0" />
-                <span className="truncate">ระบบปรับอากาศ (HVAC)</span>
-              </div>
-              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${(catStats.hvac / maxCat) * 100}%` }}
-                />
-              </div>
-              <span className="w-4 text-right font-bold text-foreground tabular-nums">
-                {catStats.hvac}
-              </span>
-            </div>
-
-            {/* งานติดตั้ง */}
-            <div className="flex items-center gap-2.5 sm:gap-3 text-xs">
-              <div className="flex items-center gap-1.5 sm:gap-2 w-32 sm:w-36 shrink-0 text-muted-foreground">
-                <Plug className="h-3.5 w-3.5 text-teal-500 shrink-0" />
-                <span className="truncate">งานติดตั้ง</span>
-              </div>
-              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${(catStats.installation / maxCat) * 100}%` }}
-                />
-              </div>
-              <span className="w-4 text-right font-bold text-foreground tabular-nums">
-                {catStats.installation}
-              </span>
-            </div>
-
-            {/* งานตรวจสอบ */}
-            <div className="flex items-center gap-2.5 sm:gap-3 text-xs">
-              <div className="flex items-center gap-1.5 sm:gap-2 w-32 sm:w-36 shrink-0 text-muted-foreground">
-                <ClipboardCheck className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                <span className="truncate">งานตรวจสอบ</span>
-              </div>
-              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${(catStats.inspection / maxCat) * 100}%` }}
-                />
-              </div>
-              <span className="w-4 text-right font-bold text-muted-foreground tabular-nums">
-                {catStats.inspection}
-              </span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Card 3: ข้อมูลเพิ่มเติม (~30% -> 3 cols) */}
-        <Card className="md:col-span-2 lg:col-span-3 p-4 sm:p-5 shadow-xs border border-border flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <Shield className="h-3.5 w-3.5 text-blue-600" />
-              <h3 className="font-bold text-xs text-foreground">ข้อมูลเพิ่มเติม</h3>
-            </div>
-            {/* Tablet button at top right */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toast.info("เปิดหน้าต่างแก้ไขข้อมูลช่าง")}
-              className="hidden md:inline-flex lg:hidden h-7 border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-semibold gap-1.5"
-            >
-              <Edit3 className="h-3 w-3" />
-              <span>แก้ไขข้อมูล</span>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-1 gap-x-6 gap-y-2 text-xs text-muted-foreground my-auto">
-            <div className="flex justify-between border-b sm:border-b-0 pb-1 sm:pb-0">
-              <span>รหัสพนักงาน</span>
-              <strong className="text-foreground font-semibold">{tech.emp_id}</strong>
-            </div>
-            <div className="flex justify-between border-b sm:border-b-0 pb-1 sm:pb-0">
-              <span>เบอร์โทรศัพท์</span>
-              <strong className="text-foreground font-semibold">{tech.phone}</strong>
-            </div>
-            <div className="flex justify-between border-b sm:border-b-0 pb-1 sm:pb-0">
-              <span>อีเมล</span>
-              <strong className="text-foreground font-semibold truncate max-w-[130px]">{tech.email}</strong>
-            </div>
-            <div className="flex justify-between border-b sm:border-b-0 pb-1 sm:pb-0">
-              <span>แผนก</span>
-              <strong className="text-foreground font-semibold">{tech.department}</strong>
-            </div>
-            <div className="flex justify-between border-b sm:border-b-0 pb-1 sm:pb-0">
-              <span>ตำแหน่ง</span>
-              <strong className="text-foreground font-semibold">{tech.role}</strong>
-            </div>
-            <div className="flex justify-between">
-              <span>วันที่เข้าทำงาน</span>
-              <strong className="text-foreground font-semibold">{tech.startDate}</strong>
-            </div>
-          </div>
-
-          {/* Edit Info Button (mobile & desktop) */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => toast.info("เปิดหน้าต่างแก้ไขข้อมูลช่าง")}
-            className="md:hidden lg:inline-flex w-full mt-3 h-8 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 text-xs font-semibold gap-1.5"
-          >
-            <Edit3 className="h-3 w-3" />
-            <span>แก้ไขข้อมูล</span>
+          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/")}>
+            <LogOut className="h-5 w-5" />
           </Button>
-        </Card>
-      </div>
+        </div>
+      </header>
 
-      {/* ── Bottom Row: รายการงานของช่าง (Left 70%) + งานล่าสุด & หมายเหตุ (Right 30%) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Card: รายการงานของช่าง (~70% -> 8 cols) */}
-        <Card className="lg:col-span-8 p-4 sm:p-5 shadow-xs border border-border">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center">
-                <ClipboardList className="h-3.5 w-3.5" />
-              </div>
-              <h3 className="font-bold text-xs text-foreground">รายการงานของช่าง</h3>
-            </div>
-
-            {/* Filter controls */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-              <div className="relative w-full sm:w-56">
-                <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="ค้นหางาน (เลขที่งาน / ชื่อลูกค้า / รายละเอียด)..."
-                  value={jobSearch}
-                  onChange={(e) => setJobSearch(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg border border-input bg-muted/40 focus:bg-background focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Select
-                  value={jobStatusFilter}
-                  onValueChange={setJobStatusFilter}
-                >
-                  <SelectTrigger aria-label="สถานะงาน" className="flex-1 sm:flex-none h-8 w-auto min-w-[120px] rounded-lg border-input bg-muted/40 px-2.5 text-xs font-medium">
-                    <SelectValue placeholder="สถานะทั้งหมด" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">สถานะทั้งหมด</SelectItem>
-                    <SelectItem value="doing">ดำเนินการ</SelectItem>
-                    <SelectItem value="assigned">รับงาน</SelectItem>
-                    <SelectItem value="complete">เสร็จสิ้น</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={jobSort}
-                  onValueChange={setJobSort}
-                >
-                  <SelectTrigger aria-label="การเรียงลำดับ" className="flex-1 sm:flex-none h-8 w-auto min-w-[90px] rounded-lg border-input bg-muted/40 px-2.5 text-xs font-medium">
-                    <SelectValue placeholder="ล่าสุด" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="latest">ล่าสุด</SelectItem>
-                    <SelectItem value="oldest">เก่าสุด</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* Profile Card */}
+      <div className="bg-gradient-primary text-primary-foreground px-6 pb-6">
+        <div className="flex items-center gap-4 max-w-4xl mx-auto">
+          <div className="h-16 w-16 rounded-2xl bg-secondary grid place-items-center text-secondary-foreground font-bold text-2xl shrink-0">
+            {tech.name.charAt(0)}
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold">{tech.name}</h2>
+            <p className="text-primary-foreground/70 text-sm">{tech.department} · {tech.technician_id}</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs">งานทั้งหมด: {mine.length}</span>
+              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 text-xs">เสร็จ: {doneJobs.length}</span>
+              <span className="rounded-full bg-cyan-500/20 border border-cyan-400/30 px-2.5 py-0.5 text-xs">กำลังทำ: {activeJobs.filter(r => r.status === "doing").length}</span>
             </div>
           </div>
-
-          {/* Desktop & Tablet Table (>= sm) */}
-          <div className="hidden sm:block overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-            <table className="w-full text-left text-xs min-w-[660px]">
-              <thead>
-                <tr className="border-b border-border/80 text-muted-foreground font-semibold pb-2">
-                  <th className="py-2.5 px-3 text-center w-10">ลำดับ</th>
-                  <th className="py-2.5 px-3 min-w-[100px]">เลขที่งาน</th>
-                  <th className="py-2.5 px-3 min-w-[150px]">ชื่อลูกค้า / สถานที่</th>
-                  <th className="py-2.5 px-3 min-w-[170px]">รายละเอียดงาน</th>
-                  <th className="py-2.5 px-3 text-center min-w-[90px]">สถานะ</th>
-                  <th className="py-2.5 px-3 min-w-[100px]">วันที่รับงาน</th>
-                  <th className="py-2.5 px-3 min-w-[120px]">วันที่อัปเดตล่าสุด</th>
-                  <th className="py-2.5 px-3 text-right w-20">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {filteredJobs.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-8 text-center text-muted-foreground text-xs">
-                      ไม่พบรายการงานตามเงื่อนไขที่ค้นหา
-                    </td>
-                  </tr>
-                ) : (
-                  filteredJobs.map((job, idx) => (
-                    <tr key={job.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-3 text-center font-bold text-foreground tabular-nums">
-                        {idx + 1}
-                      </td>
-
-                      <td className="py-3 px-3 font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200">
-                        {job.id}
-                      </td>
-
-                      <td className="py-3 px-3 font-medium text-foreground">
-                        {job.clientOrLocation}
-                      </td>
-
-                      <td className="py-3 px-3 text-muted-foreground max-w-[200px] truncate">
-                        {job.detail}
-                      </td>
-
-                      <td className="py-3 px-3 text-center">
-                        {job.status === "doing" && (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> ดำเนินการ
-                          </span>
-                        )}
-                        {job.status === "assigned" && (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> รับงาน
-                          </span>
-                        )}
-                        {job.status === "complete" && (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> เสร็จสิ้น
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-3 text-muted-foreground text-[11px]">
-                        {job.assignedDate}
-                      </td>
-
-                      <td className="py-3 px-3 text-muted-foreground text-[11px]">
-                        {job.updatedDate}
-                      </td>
-
-                      <td className="py-3 px-3 text-right">
-                        <button
-                          onClick={() => toast.info(`ดูรายละเอียดงาน ${job.id}`)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border text-foreground/80 hover:text-blue-600 hover:border-blue-300 text-[11px] font-medium transition-colors"
-                        >
-                          <Eye className="h-3 w-3" />
-                          <span>ดูรายละเอียด</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Jobs Card View (< sm) */}
-          <div className="sm:hidden space-y-3">
-            {filteredJobs.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground text-xs">
-                ไม่พบรายการงานตามเงื่อนไขที่ค้นหา
-              </div>
-            ) : (
-              filteredJobs.map((job, idx) => (
-                <div
-                  key={job.id}
-                  className="p-3.5 rounded-xl border border-border bg-card shadow-2xs space-y-2.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-md bg-muted text-muted-foreground font-bold text-[10px] flex items-center justify-center">
-                        #{idx + 1}
-                      </span>
-                      <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                        {job.id}
-                      </span>
-                    </div>
-                    <div>
-                      {job.status === "doing" && (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> ดำเนินการ
-                        </span>
-                      )}
-                      {job.status === "assigned" && (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600" /> รับงาน
-                        </span>
-                      )}
-                      {job.status === "complete" && (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> เสร็จสิ้น
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-bold text-foreground leading-snug">{job.clientOrLocation}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{job.detail}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/60">
-                    <span>รับงาน: {job.assignedDate}</span>
-                    <span>อัปเดต: {job.updatedDate}</span>
-                  </div>
-
-                  <button
-                    onClick={() => toast.info(`ดูรายละเอียดงาน ${job.id}`)}
-                    className="w-full py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>ดูรายละเอียด</span>
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-border/80 mt-2">
-            <p className="text-xs text-muted-foreground">
-              แสดง 1 - {filteredJobs.length} จากทั้งหมด {jobs.length} งาน
-            </p>
-
-            <div className="flex items-center gap-1">
-              <button
-                disabled
-                className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground opacity-40 cursor-not-allowed"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-              <button className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-semibold shadow-2xs">
-                1
-              </button>
-              <button
-                disabled
-                className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground opacity-40 cursor-not-allowed"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Right Side (งานล่าสุด + หมายเหตุ, ~30% -> 4 cols) */}
-        <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-          {/* Card 1: งานล่าสุด */}
-          <Card className="p-4 sm:p-5 shadow-xs border border-border">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>งานล่าสุด</span>
-              </div>
-              <button
-                onClick={() => toast.info("ดูรายการงานทั้งหมด")}
-                className="text-[11px] text-muted-foreground hover:text-blue-600 font-medium transition-colors"
-              >
-                ดูทั้งหมด →
-              </button>
-            </div>
-
-            <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-2.5 pl-4 space-y-4 my-1">
-              {jobs.slice(0, 5).map((job) => (
-                <div key={job.id} className="relative flex items-start justify-between gap-2 text-xs">
-                  <span
-                    className={cn(
-                      "absolute -left-[22px] top-1 w-2.5 h-2.5 rounded-full border-2 border-background ring-2 ring-muted/50 shrink-0",
-                      job.status === "doing"
-                        ? "bg-amber-500"
-                        : job.status === "assigned"
-                        ? "bg-blue-600"
-                        : "bg-emerald-500"
-                    )}
-                  />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground text-[11px] truncate">
-                      {job.id}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {job.detail}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/80 mt-0.5">
-                      {job.updatedDate}
-                    </p>
-                  </div>
-
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2 py-0.2 text-[10px] font-semibold border",
-                      job.status === "doing" && "bg-amber-50 text-amber-700 border-amber-200",
-                      job.status === "assigned" && "bg-blue-50 text-blue-700 border-blue-200",
-                      job.status === "complete" && "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    )}
-                  >
-                    {job.status === "doing" ? "ดำเนินการ" : job.status === "assigned" ? "รับงาน" : "เสร็จสิ้น"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Card 2: หมายเหตุ */}
-          <Card className="p-4 sm:p-5 shadow-xs border border-border">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-foreground mb-2">
-              <StickyNote className="h-4 w-4 text-blue-600" />
-              <span>หมายเหตุ</span>
-            </div>
-
-            {notes.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2 text-center">
-                ไม่มีหมายเหตุเพิ่มเติม
-              </p>
-            ) : (
-              <div className="space-y-1.5 py-1">
-                {notes.map((n, i) => (
-                  <div key={i} className="text-xs text-foreground bg-muted/40 p-2 rounded-lg border border-border/60">
-                    {n}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {isAddNoteOpen ? (
-              <div className="space-y-2 mt-2 pt-2 border-t">
-                <textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="พิมพ์ข้อความหมายเหตุ..."
-                  rows={2}
-                  className="w-full text-xs p-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <div className="flex justify-end gap-1.5">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => { setIsAddNoteOpen(false); setNewNote(""); }}
-                  >
-                    ยกเลิก
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={handleAddNote}
-                  >
-                    บันทึก
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsAddNoteOpen(true)}
-                className="w-full mt-2 py-2 rounded-xl border border-dashed border-border text-muted-foreground hover:border-blue-400 hover:text-blue-600 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>เพิ่มหมายเหตุ</span>
-              </button>
-            )}
-          </Card>
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="sticky top-[57px] z-20 bg-background border-b">
+        <div className="flex overflow-x-auto px-4 max-w-4xl mx-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors",
+                activeTab === tab.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {tab.icon}{tab.label}
+              {tab.key === "jobs" && activeJobs.length > 0 && (
+                <span className="rounded-full bg-primary/10 text-primary text-xs px-1.5 py-0.5">{activeJobs.length}</span>
+              )}
+              {tab.key === "spares" && mySpareRequests.filter(s => s.status === "pending").length > 0 && (
+                <span className="rounded-full bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5">{mySpareRequests.filter(s => s.status === "pending").length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <main className="flex-1 p-4 sm:p-6 max-w-4xl mx-auto w-full">
+        {/* Tab: งานที่รับ */}
+        {activeTab === "jobs" && (
+          <Card className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">งานที่รับผิดชอบ ({activeJobs.length} งาน)</p>
+            {activeJobs.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">ไม่มีงานที่ค้างอยู่ ✅</p>
+            ) : (
+              activeJobs.map((r) => <JobRow key={r.request_id} req={r} />)
+            )}
+          </Card>
+        )}
+
+        {/* Tab: งานที่ขออะไหล่ */}
+        {activeTab === "spares" && (
+          <Card className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">คำขออะไหล่ ({mySpareRequests.length} รายการ)</p>
+            {mySpareRequests.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">ยังไม่มีคำขออะไหล่</p>
+            ) : (
+              <div className="space-y-3">
+                {mySpareRequests.map((sr) => {
+                  const statusCls: Record<string, string> = {
+                    pending: "bg-amber-100 text-amber-700",
+                    approved: "bg-blue-100 text-blue-700",
+                    rejected: "bg-red-100 text-red-700",
+                    ordered: "bg-violet-100 text-violet-700",
+                    received: "bg-emerald-100 text-emerald-700",
+                  };
+                  const statusLbl: Record<string, string> = {
+                    pending: "รออนุมัติ", approved: "อนุมัติแล้ว",
+                    rejected: "ปฏิเสธ", ordered: "สั่งซื้อแล้ว", received: "ได้รับแล้ว",
+                  };
+                  return (
+                    <div key={sr.sr_id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/40 border">
+                      <Package className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                          <p className="font-mono text-xs text-primary">{sr.sr_id}</p>
+                          <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", statusCls[sr.status])}>{statusLbl[sr.status]}</span>
+                          {sr.po_number && <span className="text-xs text-muted-foreground">· {sr.po_number}</span>}
+                        </div>
+                        <p className="text-sm font-medium">{sr.part_name}</p>
+                        <p className="text-xs text-muted-foreground">{sr.quantity} {sr.unit} · ฿{(sr.quantity * sr.unit_price).toLocaleString("th-TH")} · {timeAgo(sr.requested_at)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Tab: งานที่เสร็จ */}
+        {activeTab === "done" && (
+          <Card className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">งานที่เสร็จสิ้นแล้ว ({doneJobs.length} งาน)</p>
+            {doneJobs.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">ยังไม่มีงานที่เสร็จ</p>
+            ) : (
+              doneJobs.map((r) => <JobRow key={r.request_id} req={r} showDuration={true} />)
+            )}
+          </Card>
+        )}
+
+        {/* Tab: KPI */}
+        {activeTab === "kpi" && <KpiSection requests={requests} techId={tech.technician_id} />}
+
+        {/* Footer nav */}
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/dashboard")}>
+            <BarChart3 className="h-4 w-4" />Admin Dashboard
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/technician-history")}>
+            <History className="h-4 w-4" />Timeline ประวัติช่างทั้งหมด
+          </Button>
+        </div>
+      </main>
     </div>
   );
 }

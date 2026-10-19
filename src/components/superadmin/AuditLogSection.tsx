@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { createPortal } from "react-dom";
 import {
   FileText, Search, Filter, Download, RotateCcw, Shield, Eye,
   Clock, User, CheckCircle2, AlertTriangle, Activity
@@ -7,13 +6,6 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_AUDIT_LOGS,
@@ -29,7 +21,7 @@ const ACTION_BADGE: Record<AuditAction, { bg: string; text: string; border: stri
   CREATE:       { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
   UPDATE:       { bg: "bg-cyan-50",   text: "text-cyan-700",   border: "border-cyan-200" },
   DELETE:       { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-200" },
-  OVERRIDE:     { bg: "bg-slate-100",  text: "text-slate-800",   border: "border-slate-300" },
+  OVERRIDE:     { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
   APPROVE:      { bg: "bg-teal-50",   text: "text-teal-700",   border: "border-teal-200" },
   REJECT:       { bg: "bg-rose-50",   text: "text-rose-700",   border: "border-rose-200" },
   STOCK_ADJUST: { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200" },
@@ -92,7 +84,7 @@ export function AuditLogSection() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
+            <FileText className="h-6 w-6 text-purple-600" />
             ประวัติการเปลี่ยนแปลงระบบ (System Audit Log & Activity Trail)
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -129,43 +121,37 @@ export function AuditLogSection() {
 
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Select
+            <select
               value={actionFilter}
-              onValueChange={setActionFilter}
+              onChange={(e) => setActionFilter(e.target.value)}
+              aria-label="กรองตามการกระทำ"
+              className="h-10 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
             >
-              <SelectTrigger aria-label="กรองตามการกระทำ" className="h-10 w-[180px] text-sm shadow-sm">
-                <SelectValue placeholder={`ทุก Action (${logs.length})`} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ทุก Action ({logs.length})</SelectItem>
-                <SelectItem value="LOGIN">LOGIN</SelectItem>
-                <SelectItem value="CREATE">CREATE</SelectItem>
-                <SelectItem value="UPDATE">UPDATE</SelectItem>
-                <SelectItem value="DELETE">DELETE</SelectItem>
-                <SelectItem value="OVERRIDE">OVERRIDE</SelectItem>
-                <SelectItem value="APPROVE">APPROVE</SelectItem>
-                <SelectItem value="REJECT">REJECT</SelectItem>
-                <SelectItem value="STOCK_ADJUST">STOCK_ADJUST</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="all">ทุก Action ({logs.length})</option>
+              <option value="LOGIN">LOGIN</option>
+              <option value="CREATE">CREATE</option>
+              <option value="UPDATE">UPDATE</option>
+              <option value="DELETE">DELETE</option>
+              <option value="OVERRIDE">OVERRIDE</option>
+              <option value="APPROVE">APPROVE</option>
+              <option value="REJECT">REJECT</option>
+              <option value="STOCK_ADJUST">STOCK_ADJUST</option>
+            </select>
 
-            <Select
+            <select
               value={entityFilter}
-              onValueChange={setEntityFilter}
+              onChange={(e) => setEntityFilter(e.target.value)}
+              aria-label="กรองตามโมดูลระบบ"
+              className="h-10 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
             >
-              <SelectTrigger aria-label="กรองตามโมดูลระบบ" className="h-10 w-[200px] text-sm shadow-sm">
-                <SelectValue placeholder="ทุกโมดูล" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ทุกโมดูล</SelectItem>
-                <SelectItem value="WORK_REQUEST">Work Request (งานซ่อม)</SelectItem>
-                <SelectItem value="USER">User (ผู้ใช้)</SelectItem>
-                <SelectItem value="SPARE_PART">Spare Part (อะไหล่)</SelectItem>
-                <SelectItem value="PO">PO (ใบสั่งซื้อ)</SelectItem>
-                <SelectItem value="USER_APPROVAL">User Approval</SelectItem>
-                <SelectItem value="SYSTEM_SETTING">System Setting</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="all">ทุกโมดูล</option>
+              <option value="WORK_REQUEST">Work Request (งานซ่อม)</option>
+              <option value="USER">User (ผู้ใช้)</option>
+              <option value="SPARE_PART">Spare Part (อะไหล่)</option>
+              <option value="PO">PO (ใบสั่งซื้อ)</option>
+              <option value="USER_APPROVAL">User Approval</option>
+              <option value="SYSTEM_SETTING">System Setting</option>
+            </select>
           </div>
         </div>
       </Card>
@@ -250,15 +236,9 @@ export function AuditLogSection() {
       </Card>
 
       {/* ── Detail Payload Modal ── */}
-      {detailModalLog && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setDetailModalLog(null)}
-        >
-          <Card
-            className="w-full max-w-lg p-6 bg-background space-y-4 shadow-2xl animate-in fade-in zoom-in-95 cursor-default"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {detailModalLog && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg p-6 bg-background space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex items-start justify-between border-b pb-3">
               <div>
                 <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
@@ -307,8 +287,7 @@ export function AuditLogSection() {
               </Button>
             </div>
           </Card>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

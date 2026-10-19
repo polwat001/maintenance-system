@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   Users, ArrowLeft, Crown, Search, Plus, Edit3, Trash2,
@@ -10,13 +9,6 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_SYSTEM_USERS,
@@ -74,14 +66,8 @@ function UserFormModal({
   const canSave = name.trim() && empId.trim() && username.trim() && email.trim();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 cursor-pointer"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card rounded-2xl shadow-2xl w-full max-w-lg border max-h-[90vh] overflow-y-auto cursor-default"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg border max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b flex items-center justify-between">
           <div>
             <h3 className="font-bold text-lg">{isEdit ? "แก้ไขผู้ใช้งาน" : "เพิ่มผู้ใช้งานใหม่"}</h3>
@@ -130,35 +116,27 @@ function UserFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Role</label>
-              <Select
+              <select
+                className="w-full h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={role}
-                onValueChange={(val) => setRole(val as UserRole)}
+                onChange={(e) => setRole(e.target.value as UserRole)}
               >
-                <SelectTrigger className="w-full h-10 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ALL_ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>{ROLE_LABEL[r]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {ALL_ROLES.map((r) => (
+                  <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">สถานะ</label>
-              <Select
+              <select
+                className="w-full h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={status}
-                onValueChange={(val) => setStatus(val as UserStatus)}
+                onChange={(e) => setStatus(e.target.value as UserStatus)}
               >
-                <SelectTrigger className="w-full h-10 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ALL_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{USER_STATUS_LABEL[s]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {ALL_STATUSES.map((s) => (
+                  <option key={s} value={s}>{USER_STATUS_LABEL[s]}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -195,14 +173,8 @@ function UserDetailModal({
 }) {
   const stCfg = STATUS_CONFIG[user.status];
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 cursor-pointer"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card rounded-2xl shadow-2xl w-full max-w-md border cursor-default"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md border">
         <div className="p-6 border-b flex items-center justify-between">
           <h3 className="font-bold text-lg">รายละเอียดผู้ใช้งาน</h3>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
@@ -282,12 +254,12 @@ function UserDetailModal({
             <Button
               variant="outline"
               size="sm"
-              className={cn("flex-1 gap-1", user.status === "active" ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50")}
+              className={cn("flex-1 gap-1", user.status === "active" ? "text-red-600 hover:bg-red-50" : "text-emerald-600 hover:bg-emerald-50")}
               onClick={onToggleStatus}
             >
               {user.status === "active" ? <><Ban className="h-3.5 w-3.5" /> ระงับ</> : <><Unlock className="h-3.5 w-3.5" /> เปิดใช้งาน</>}
             </Button>
-            <Button variant="outline" size="sm" className="gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50" onClick={onResetPassword}>
+            <Button variant="outline" size="sm" className="gap-1 text-amber-600 hover:bg-amber-50" onClick={onResetPassword}>
               <Key className="h-3.5 w-3.5" /> รีเซ็ต
             </Button>
           </div>
@@ -299,11 +271,7 @@ function UserDetailModal({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-interface SuperadminUserManagementProps {
-  embedded?: boolean;
-}
-
-export default function SuperadminUserManagement({ embedded = false }: SuperadminUserManagementProps = {}) {
+export default function SuperadminUserManagement() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<SystemUser[]>(MOCK_SYSTEM_USERS);
   const [search, setSearch] = useState("");
@@ -381,54 +349,35 @@ export default function SuperadminUserManagement({ embedded = false }: Superadmi
   };
 
   return (
-    <div className={cn(!embedded && "min-h-screen bg-background")}>
-      {/* ── Header (Standalone only) ── */}
-      {!embedded && (
-        <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
-          <div className="px-4 py-3 flex items-center gap-3 text-white">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => navigate("/superadmin/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="h-9 w-9 rounded-md bg-amber-400 grid place-items-center shrink-0">
-              <Crown className="h-5 w-5 text-amber-900" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs uppercase tracking-wider text-white/70">Superadmin</div>
-              <h1 className="font-bold truncate">จัดการผู้ใช้งาน</h1>
-            </div>
-            <Button
-              size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white border-0 gap-1.5"
-              onClick={() => { setEditUser(undefined); setShowForm(true); }}
-            >
-              <UserPlus className="h-4 w-4" /> เพิ่มผู้ใช้
-            </Button>
+    <div className="min-h-screen bg-background">
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-30 shadow-md" style={{ background: "linear-gradient(135deg, hsl(260 70% 25%) 0%, hsl(280 60% 35%) 50%, hsl(300 50% 30%) 100%)" }}>
+        <div className="px-4 py-3 flex items-center gap-3 text-white">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => navigate("/superadmin/dashboard")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="h-9 w-9 rounded-md bg-amber-400 grid place-items-center shrink-0">
+            <Crown className="h-5 w-5 text-amber-900" />
           </div>
-        </header>
-      )}
-
-      {/* Embedded Action Bar */}
-      {embedded && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-card p-4 rounded-2xl border border-border/80 shadow-2xs">
-          <div>
-            <h2 className="text-base font-bold text-foreground">จัดการบัญชีและสิทธิ์ผู้ใช้งาน</h2>
-            <p className="text-xs text-muted-foreground">กำหนดบทบาท สิทธิ์การเข้าถึง และสถานะการใช้งานของบุคลากรในระบบ</p>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs uppercase tracking-wider text-white/70">Superadmin</div>
+            <h1 className="font-bold truncate">จัดการผู้ใช้งาน</h1>
           </div>
           <Button
             size="sm"
-            className="gap-1.5 shadow-xs w-full sm:w-auto"
+            className="bg-white/20 hover:bg-white/30 text-white border-0 gap-1.5"
             onClick={() => { setEditUser(undefined); setShowForm(true); }}
           >
             <UserPlus className="h-4 w-4" /> เพิ่มผู้ใช้
           </Button>
         </div>
-      )}
+      </header>
 
-      <div className={cn(embedded ? "space-y-4" : "max-w-7xl mx-auto p-6 space-y-6")}>
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         {/* ── Stats ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: "ทั้งหมด", value: stats.total, cls: "border-l-primary", icon: <Users className="h-5 w-5 text-primary" /> },
+            { label: "ทั้งหมด", value: stats.total, cls: "border-l-indigo-500", icon: <Users className="h-5 w-5" /> },
             { label: "ใช้งาน", value: stats.active, cls: "border-l-emerald-500", icon: <CheckCircle2 className="h-5 w-5 text-emerald-600" /> },
             { label: "ไม่ได้ใช้งาน", value: stats.inactive, cls: "border-l-gray-400", icon: <Clock className="h-5 w-5 text-gray-500" /> },
             { label: "ระงับ", value: stats.suspended, cls: "border-l-red-500", icon: <XCircle className="h-5 w-5 text-red-500" /> },
@@ -461,31 +410,22 @@ export default function SuperadminUserManagement({ embedded = false }: Superadmi
               )}
             </div>
             <div className="flex gap-2">
-              <Select
+              <select
+                className="h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={roleFilter}
-                onValueChange={(val) => setRoleFilter(val as UserRole | "all")}
+                onChange={(e) => setRoleFilter(e.target.value as UserRole | "all")}
               >
-                <SelectTrigger className="h-10 w-[140px] text-sm">
-                  <SelectValue placeholder="ทุก Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">ทุก Role</SelectItem>
-                  {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_LABEL[r]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select
+                <option value="all">ทุก Role</option>
+                {ALL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+              </select>
+              <select
+                className="h-10 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={statusFilter}
-                onValueChange={(val) => setStatusFilter(val as UserStatus | "all")}
+                onChange={(e) => setStatusFilter(e.target.value as UserStatus | "all")}
               >
-                <SelectTrigger className="h-10 w-[140px] text-sm">
-                  <SelectValue placeholder="ทุกสถานะ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">ทุกสถานะ</SelectItem>
-                  {ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{USER_STATUS_LABEL[s]}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                <option value="all">ทุกสถานะ</option>
+                {ALL_STATUSES.map((s) => <option key={s} value={s}>{USER_STATUS_LABEL[s]}</option>)}
+              </select>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">แสดง {filtered.length} จาก {users.length} บัญชี</p>
@@ -595,23 +535,21 @@ export default function SuperadminUserManagement({ embedded = false }: Superadmi
       </div>
 
       {/* Modals */}
-      {showForm && typeof document !== "undefined" && createPortal(
+      {(showForm) && (
         <UserFormModal
           user={editUser}
           onClose={() => { setShowForm(false); setEditUser(undefined); }}
           onSave={handleSave}
-        />,
-        document.body
+        />
       )}
-      {viewUser && typeof document !== "undefined" && createPortal(
+      {viewUser && (
         <UserDetailModal
           user={viewUser}
           onClose={() => setViewUser(undefined)}
           onEdit={() => { setViewUser(undefined); setEditUser(viewUser); setShowForm(true); }}
           onToggleStatus={() => handleToggleStatus(viewUser)}
           onResetPassword={() => handleResetPassword(viewUser)}
-        />,
-        document.body
+        />
       )}
     </div>
   );

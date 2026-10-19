@@ -5,8 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/date-picker";
-import { TimePicker } from "@/components/ui/time-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -39,13 +37,10 @@ import {
   TriangleAlert,
   Waves,
   Wrench,
-  X,
   Zap,
-  ZoomIn,
 } from "lucide-react";
 import jsQR from "jsqr";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 const CATEGORIES: { value: WorkRequest["category"]; label: string; icon: typeof Zap }[] = [
   { value: "electrical-control", label: "ไฟฟ้า / ระบบควบคุม", icon: Zap },
@@ -156,12 +151,6 @@ const RequestForm = () => {
   const currentUserName = currentUser.name || REQUESTER_NAME;
   const currentUserId = currentUser.emp_id || "REQ042";
   const currentDepartment = currentUser.department || "ฝ่ายผลิต";
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("fixflow_user");
-    toast.success("ออกจากระบบเรียบร้อยแล้ว");
-    navigate("/");
-  };
   const photoInputRef = useRef<HTMLInputElement>(null);
   const qrImageInputRef = useRef<HTMLInputElement>(null);
   const toastedNotificationIdsRef = useRef<Set<string>>(new Set());
@@ -188,7 +177,6 @@ const RequestForm = () => {
   const [qrManualInput, setQrManualInput] = useState("");
   const [manualEntry, setManualEntry] = useState(false);
   const [attachments, setAttachments] = useState<RequestAttachment[]>([]);
-  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
@@ -728,14 +716,12 @@ const RequestForm = () => {
           </Button>
           <Button
             variant="ghost"
-            size="sm"
-            className="h-9 px-2 sm:px-3 text-primary-foreground/90 hover:text-white hover:bg-white/10 gap-1.5 text-xs sm:text-sm font-medium transition-colors shrink-0"
-            onClick={handleLogout}
-            title="ออกจากระบบ"
+            size="icon"
+            className="text-primary-foreground hover:bg-white/10"
+            onClick={() => navigate("/")}
             aria-label="ออกจากระบบ"
           >
-            <LogOut className="h-4 w-4 text-rose-300" />
-            <span className="hidden sm:inline">ออกจากระบบ</span>
+            <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </header>
@@ -788,43 +774,42 @@ const RequestForm = () => {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2 w-full">
-                <input
-                  ref={qrImageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => void handlePickQrImage(e.target.files)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={imageScanLoading}
-                  onClick={() => qrImageInputRef.current?.click()}
-                  className="w-full justify-center text-xs sm:text-sm h-9 px-2 sm:px-3 font-normal"
-                >
-                  <ImagePlus className="h-4 w-4 mr-1.5 shrink-0" />
-                  <span className="truncate">{imageScanLoading ? "กำลังสแกนรูป..." : "เลือกรูปสแกน QR"}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void openCameraScanner()}
-                  className="w-full justify-center text-xs sm:text-sm h-9 px-2 sm:px-3 font-normal"
-                >
-                  <Camera className="h-4 w-4 mr-1.5 shrink-0" />
-                  <span className="truncate">เปิดกล้องสแกน QR</span>
-                </Button>
+              <div className="flex justify-end">
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={qrImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => void handlePickQrImage(e.target.files)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={imageScanLoading}
+                    onClick={() => qrImageInputRef.current?.click()}
+                  >
+                    <ImagePlus className="h-4 w-4 mr-1" />
+                    {imageScanLoading ? "กำลังสแกนรูป..." : "เลือกรูปสแกน QR"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void openCameraScanner()}
+                  >
+                    <Camera className="h-4 w-4 mr-1" />
+                    เปิดกล้องสแกน QR
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+              <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
                 <span className="text-xs text-muted-foreground">ไม่สะดวกสแกน? เปิดโหมดกรอกข้อมูลเครื่องจักรเอง</span>
                 <Button
                   type="button"
                   variant={manualEntry ? "default" : "outline"}
                   size="sm"
-                  className="shrink-0"
                   onClick={() => setManualEntry((prev) => !prev)}
                 >
                   <PencilLine className="h-4 w-4 mr-1" />
@@ -958,23 +943,31 @@ const RequestForm = () => {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="report_date" className="text-xs">วันที่แจ้งซ่อม (Auto จาก QR)</Label>
-                <DatePicker
-                  id="report_date"
-                  value={reportedDateFromQr}
-                  onChange={setReportedDateFromQr}
-                  disabled={!manualEntry}
-                  placeholder="เลือกวันที่แจ้งซ่อม"
-                />
+                <div className="relative">
+                  <Factory className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="report_date"
+                    type="date"
+                    value={reportedDateFromQr}
+                    disabled={!manualEntry}
+                    onChange={(e) => setReportedDateFromQr(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="report_time" className="text-xs">เวลาแจ้งซ่อม (Auto จาก QR)</Label>
-                <TimePicker
-                  id="report_time"
-                  value={reportedTimeFromQr}
-                  onChange={setReportedTimeFromQr}
-                  disabled={!manualEntry}
-                  placeholder="เลือกเวลาแจ้งซ่อม"
-                />
+                <div className="relative">
+                  <Clock3 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="report_time"
+                    type="time"
+                    value={reportedTimeFromQr}
+                    disabled={!manualEntry}
+                    onChange={(e) => setReportedTimeFromQr(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1156,68 +1149,32 @@ const RequestForm = () => {
               </div>
 
               {attachments.length > 0 && (
-                <div
-                  className={cn(
-                    "flex flex-wrap items-center gap-3 p-3 rounded-lg border border-border/70 bg-muted/20 min-h-[140px]",
-                    attachments.length === 1 ? "justify-center" : "justify-start"
-                  )}
-                >
-                  {attachments.map((attachment) => {
-                    const isImg =
-                      attachment.mime_type?.startsWith("image/") ||
-                      attachment.url.startsWith("data:image") ||
-                      /\.(jpe?g|png|webp|gif|svg|bmp)$/i.test(attachment.name || "") ||
-                      /\.(jpe?g|png|webp|gif|svg|bmp)/i.test(attachment.url);
-
-                    return (
-                      <div
-                        key={attachment.attachment_id}
-                        className="relative rounded-lg overflow-hidden border border-border bg-card shadow-sm p-1.5 flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 group cursor-pointer hover:border-primary/60 hover:shadow-md transition-all"
-                        onClick={() => {
-                          if (isImg) {
-                            setPreviewImage({ url: attachment.url, name: attachment.name });
-                          } else {
-                            window.open(attachment.url, "_blank");
-                          }
-                        }}
-                        title="คลิกเพื่อดูรูปภาพขนาดใหญ่"
-                      >
-                        {isImg ? (
-                          <>
-                            <img
-                              src={attachment.url}
-                              alt={attachment.name}
-                              className="max-h-full max-w-full object-contain rounded pointer-events-none select-none"
-                            />
-                            <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none rounded-lg">
-                              <div className="bg-black/60 text-white rounded-full p-2 backdrop-blur-sm shadow-sm flex items-center gap-1 text-xs">
-                                <ZoomIn className="h-4 w-4" />
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="h-full w-full grid place-items-center bg-muted/40 px-2 text-center">
-                            <div className="text-[11px] text-muted-foreground">
-                              <FileText className="h-5 w-5 mx-auto mb-1 text-primary" />
-                              <span className="line-clamp-2">{attachment.name}</span>
-                            </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.attachment_id} className="relative group rounded-md overflow-hidden border">
+                      {attachment.mime_type?.startsWith("image/") || attachment.url.startsWith("data:image") ? (
+                        <img
+                          src={attachment.url}
+                          alt={attachment.name}
+                          className="h-24 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-24 w-full grid place-items-center bg-muted/40 px-2 text-center">
+                          <div className="text-[11px] text-muted-foreground">
+                            <FileText className="h-4 w-4 mx-auto mb-1" />
+                            {attachment.name}
                           </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeAttachment(attachment.attachment_id);
-                          }}
-                          className="absolute top-1.5 right-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-destructive-foreground p-1 text-xs opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-sm z-10"
-                          title="ลบ"
-                          aria-label="ลบ"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    );
-                  })}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(attachment.attachment_id)}
+                        className="absolute top-1 right-1 rounded bg-black/70 text-white text-[10px] px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ลบ
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1354,40 +1311,6 @@ const RequestForm = () => {
                 ปิด
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Lightbox Image Preview Dialog */}
-      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-        <DialogContent className="max-w-2xl sm:max-w-3xl p-4 sm:p-5">
-          <DialogHeader className="mb-2">
-            <DialogTitle className="text-sm sm:text-base font-semibold flex items-center gap-2 pr-6 truncate">
-              <Camera className="h-4 w-4 text-primary shrink-0" />
-              <span className="truncate">{previewImage?.name || "รูปภาพแนบ"}</span>
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex items-center justify-center max-h-[70vh] rounded-lg bg-muted/30 border p-2 overflow-hidden">
-            {previewImage && (
-              <img
-                src={previewImage.url}
-                alt={previewImage.name}
-                className="max-h-[65vh] max-w-full w-auto object-contain rounded"
-              />
-            )}
-          </div>
-
-          <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
-            <span>ตรวจสอบความถูกต้องของรูปภาพ</span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPreviewImage(null)}
-            >
-              ปิด
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

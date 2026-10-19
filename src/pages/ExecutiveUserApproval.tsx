@@ -1,18 +1,11 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Users, ArrowLeft, CheckCircle2, XCircle, Clock,
+  Users, ArrowLeft, LogOut, CheckCircle2, XCircle, Clock,
   Shield, UserCheck, Building2, BadgeCheck, Eye,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_USER_APPROVAL_REQUESTS,
@@ -46,8 +39,8 @@ const ROLE_COLOR: Record<UserRole, string> = {
 function RejectModal({ req, onClose, onConfirm }: { req: UserApprovalRequest; onClose: () => void; onConfirm: (reason: string) => void }) {
   const [reason, setReason] = useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md border animate-in zoom-in-95 fade-in duration-200 ease-out">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md border">
         <div className="p-6 border-b">
           <h3 className="font-bold">ปฏิเสธคำขอสิทธิ์</h3>
           <p className="text-sm text-muted-foreground mt-0.5">{req.name} · {ROLE_LABEL[req.role_requested]}</p>
@@ -89,9 +82,9 @@ function UserDetailDrawer({
   const s = STATUS_CONFIG[req.status];
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs animate-in fade-in duration-300" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md bg-card sm:border-l shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-300 ease-out">
-        <div className="p-4 sm:p-5 border-b flex items-start justify-between gap-3">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-card border-l shadow-2xl flex flex-col">
+        <div className="p-5 border-b flex items-start justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground font-mono">{req.approval_id}</p>
             <h3 className="font-bold text-base mt-0.5">{req.name}</h3>
@@ -217,9 +210,9 @@ export default function ExecutiveUserApproval() {
             { label: "อนุมัติแล้ว", value: kpi.approved, cls: "border-l-emerald-500" },
             { label: "ปฏิเสธ", value: kpi.rejected, cls: "border-l-red-500" },
           ].map((k) => (
-            <Card key={k.label} className={cn("p-3.5 sm:p-4 border-l-4 min-w-0", k.cls)}>
-              <p className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground truncate">{k.label}</p>
-              <p className="text-2xl sm:text-3xl font-bold tabular-nums whitespace-nowrap truncate mt-0.5">{k.value}</p>
+            <Card key={k.label} className={cn("p-4 border-l-4", k.cls)}>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{k.label}</p>
+              <p className="text-2xl font-bold tabular-nums">{k.value}</p>
             </Card>
           ))}
         </div>
@@ -240,20 +233,16 @@ export default function ExecutiveUserApproval() {
               </button>
             ))}
           </div>
-          <Select
+          <select
+            className="h-8 rounded-full border bg-background px-3 text-xs focus:outline-none"
             value={roleFilter}
-            onValueChange={(val) => setRoleFilter(val as UserRole | "all")}
+            onChange={(e) => setRoleFilter(e.target.value as UserRole | "all")}
           >
-            <SelectTrigger className="h-8 rounded-full border bg-background px-3 text-xs w-[130px]">
-              <SelectValue placeholder="ทุก Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุก Role</SelectItem>
-              {(Object.entries(ROLE_LABEL) as [UserRole, string][]).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="all">ทุก Role</option>
+            {(Object.entries(ROLE_LABEL) as [UserRole, string][]).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
         </div>
 
         {/* List */}
@@ -306,12 +295,12 @@ export default function ExecutiveUserApproval() {
                         )}
                       </div>
 
-                      {/* Desktop Actions */}
-                      <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                      {/* Actions */}
+                      <div className="flex flex-col sm:flex-row gap-1.5 shrink-0 items-center">
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground font-medium"
+                          className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
                           onClick={() => setSelected(req)}
                         >
                           <Eye className="h-3.5 w-3.5 mr-1" />ดูข้อมูล
@@ -320,7 +309,7 @@ export default function ExecutiveUserApproval() {
                           <>
                             <Button
                               size="sm"
-                              className="h-8 px-3 text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-medium"
+                              className="h-8 px-3 text-xs bg-emerald-500 hover:bg-emerald-600 text-white"
                               onClick={() => handleApprove(req)}
                             >
                               <UserCheck className="h-3.5 w-3.5 mr-1" />อนุมัติ
@@ -328,7 +317,7 @@ export default function ExecutiveUserApproval() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-8 px-3 text-xs border-red-200 text-red-600 hover:bg-red-50 font-medium"
+                              className="h-8 px-3 text-xs border-red-200 text-red-600 hover:bg-red-50"
                               onClick={() => setRejectTarget(req)}
                             >
                               <XCircle className="h-3.5 w-3.5 mr-1" />ปฏิเสธ
@@ -336,37 +325,6 @@ export default function ExecutiveUserApproval() {
                           </>
                         )}
                       </div>
-                    </div>
-
-                    {/* Mobile Actions (Full width bottom row) */}
-                    <div className="flex sm:hidden gap-1.5 mt-3 pt-2.5 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 h-8 text-xs font-medium"
-                        onClick={() => setSelected(req)}
-                      >
-                        <Eye className="h-3.5 w-3.5 mr-1" />ดูข้อมูล
-                      </Button>
-                      {req.status === "pending" && (
-                        <>
-                          <Button
-                            size="sm"
-                            className="flex-1 h-8 text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-medium"
-                            onClick={() => handleApprove(req)}
-                          >
-                            <UserCheck className="h-3.5 w-3.5 mr-1" />อนุมัติ
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50 font-medium"
-                            onClick={() => setRejectTarget(req)}
-                          >
-                            <XCircle className="h-3.5 w-3.5 mr-1" />ปฏิเสธ
-                          </Button>
-                        </>
-                      )}
                     </div>
                   </Card>
                 );

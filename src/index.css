@@ -5,16 +5,6 @@
 /* CMMS Industrial Design System — All colors HSL */
 
 @layer base {
-  html, body, #root {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
-
-  html {
-    scrollbar-gutter: stable;
-  }
-
   :root {
     --background: 210 20% 97%;
     --foreground: 215 28% 17%;
@@ -132,52 +122,6 @@
     font-weight: 600;
     letter-spacing: -0.01em;
   }
-
-  @media (min-width: 768px) {
-    .qc-matrix-table-desktop {
-      min-width: 1500px !important;
-    }
-  }
-
-  /* Date and time input picker indicator alignment */
-  input[type="date"],
-  input[type="time"],
-  input[type="datetime-local"] {
-    position: relative;
-    cursor: pointer;
-    accent-color: hsl(var(--primary));
-    color-scheme: light;
-  }
-
-  input[type="date"]::-webkit-calendar-picker-indicator,
-  input[type="time"]::-webkit-calendar-picker-indicator,
-  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-inline-start: auto;
-    margin-left: auto;
-    cursor: pointer;
-    opacity: 0.65;
-    padding: 2px;
-    border-radius: 4px;
-    transition: opacity 0.2s, background-color 0.2s;
-  }
-
-  input[type="date"]::-webkit-calendar-picker-indicator:hover,
-  input[type="time"]::-webkit-calendar-picker-indicator:hover,
-  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
-    opacity: 1;
-    background-color: hsl(var(--accent) / 0.1);
-  }
-
-  input[type="date"]:disabled::-webkit-calendar-picker-indicator,
-  input[type="time"]:disabled::-webkit-calendar-picker-indicator,
-  input[type="datetime-local"]:disabled::-webkit-calendar-picker-indicator {
-    cursor: not-allowed;
-    opacity: 0.3;
-  }
 }
 
 @layer components {
@@ -207,73 +151,5 @@
 
   .animate-slide-up {
     animation: slide-up 0.4s var(--transition-smooth) both;
-  }
-
-  /* Smooth two-way collapsible drawer for mobile filters */
-  .collapsible-drawer-closed {
-    max-height: 0px !important;
-    opacity: 0 !important;
-    transform: translateY(-8px);
-    pointer-events: none;
-    overflow: hidden !important;
-    transition: max-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 240ms ease,
-                transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .collapsible-drawer-open {
-    max-height: 420px !important;
-    opacity: 1 !important;
-    transform: translateY(0);
-    pointer-events: auto;
-    overflow: visible;
-    transition: max-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 280ms ease,
-                transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Smooth spring pop animation for notification badges */
-  @keyframes badge-pop {
-    0% {
-      transform: scale(0.7);
-      opacity: 0.4;
-    }
-    65% {
-      transform: scale(1.08);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-
-  .animate-badge-pop {
-    animation: badge-pop 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    will-change: transform, opacity;
-    transform-origin: center;
-  }
-
-  /* GPU-accelerated CSS Grid accordion sub-menu with 0 dead-time */
-  .sidebar-submenu-wrapper {
-    display: grid;
-    grid-template-rows: 0fr;
-    opacity: 0;
-    pointer-events: none;
-    transition: grid-template-rows 220ms cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 180ms ease;
-    will-change: grid-template-rows, opacity;
-  }
-
-  .sidebar-submenu-wrapper.is-open {
-    grid-template-rows: 1fr;
-    opacity: 1;
-    pointer-events: auto;
-    transition: grid-template-rows 240ms cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 220ms ease;
-  }
-
-  .sidebar-submenu-inner {
-    overflow: hidden;
   }
 }

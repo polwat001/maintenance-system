@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Package, LayoutDashboard, AlertTriangle,
+  Package, LogOut, LayoutDashboard, AlertTriangle,
   CheckCircle2, XCircle, Clock, Filter, Search,
   ChevronRight, ExternalLink, Wrench, ShoppingCart,
   ArrowLeft,
@@ -9,13 +9,6 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_SPARE_PART_REQUESTS,
@@ -94,9 +87,9 @@ function DetailDrawer({ item, onClose }: { item: SparePartRequest; onClose: () =
   const u = URGENCY_CONFIG[item.urgency];
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs animate-in fade-in duration-300" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md bg-card sm:border-l shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-300 ease-out">
-        <div className="p-4 sm:p-5 border-b flex items-center justify-between">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-card border-l shadow-2xl flex flex-col animate-slide-up">
+        <div className="p-5 border-b flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground font-mono">{item.sr_id}</p>
             <h3 className="font-bold text-base">{item.part_name}</h3>
@@ -155,11 +148,9 @@ function Row({ label, value, mono, bold }: { label: string; value: string; mono?
   );
 }
 
-interface AdminSpareRequestsProps {
-  embedded?: boolean;
-}
+// ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function AdminSpareRequests({ embedded = false }: AdminSpareRequestsProps = {}) {
+export default function AdminSpareRequests() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<SparePartRequest[]>(MOCK_SPARE_PART_REQUESTS);
   const [search, setSearch] = useState("");
@@ -212,10 +203,46 @@ export default function AdminSpareRequests({ embedded = false }: AdminSpareReque
     toast.error(`ปฏิเสธคำขอ ${item.sr_id}`);
   };
 
-  const bodyContent = (
-    <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Button
+            variant="ghost" size="icon"
+            className="text-primary-foreground hover:bg-white/10"
+            onClick={() => navigate("/admin/dashboard")}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="h-9 w-9 rounded-md bg-secondary grid place-items-center shrink-0">
+            <Package className="h-5 w-5 text-secondary-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Admin</div>
+            <h1 className="font-bold truncate">ความต้องการอะไหล่จากช่าง</h1>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            {kpi.pending > 0 && (
+              <span className="flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-semibold">
+                <Clock className="h-3 w-3" /> รออนุมัติ {kpi.pending}
+              </span>
+            )}
+            {kpi.critical > 0 && (
+              <span className="flex items-center gap-1.5 rounded-full bg-red-500/20 border border-red-400/40 px-3 py-1 text-xs font-semibold">
+                <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" /> วิกฤติ {kpi.critical}
+              </span>
+            )}
+          </div>
+          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/")}>
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: "คำขอทั้งหมด", value: kpi.total, cls: "border-l-primary", icon: <Package className="h-5 w-5" /> },
             { label: "รออนุมัติ", value: kpi.pending, cls: "border-l-amber-500", icon: <Clock className="h-5 w-5 text-amber-500" /> },
@@ -247,37 +274,28 @@ export default function AdminSpareRequests({ embedded = false }: AdminSpareReque
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Select
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={statusFilter}
-                onValueChange={(val) => setStatusFilter(val as SparePartRequestStatus | "all")}
+                onChange={(e) => setStatusFilter(e.target.value as SparePartRequestStatus | "all")}
               >
-                <SelectTrigger className="h-9 w-[130px] text-sm">
-                  <SelectValue placeholder="ทุกสถานะ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">ทุกสถานะ</SelectItem>
-                  <SelectItem value="pending">รออนุมัติ</SelectItem>
-                  <SelectItem value="approved">อนุมัติแล้ว</SelectItem>
-                  <SelectItem value="ordered">สั่งซื้อแล้ว</SelectItem>
-                  <SelectItem value="received">ได้รับแล้ว</SelectItem>
-                  <SelectItem value="rejected">ปฏิเสธ</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
+                <option value="all">ทุกสถานะ</option>
+                <option value="pending">รออนุมัติ</option>
+                <option value="approved">อนุมัติแล้ว</option>
+                <option value="ordered">สั่งซื้อแล้ว</option>
+                <option value="received">ได้รับแล้ว</option>
+                <option value="rejected">ปฏิเสธ</option>
+              </select>
+              <select
+                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={urgencyFilter}
-                onValueChange={(val) => setUrgencyFilter(val as "all" | "normal" | "urgent" | "critical")}
+                onChange={(e) => setUrgencyFilter(e.target.value as "all" | "normal" | "urgent" | "critical")}
               >
-                <SelectTrigger className="h-9 w-[140px] text-sm">
-                  <SelectValue placeholder="ทุกความเร่งด่วน" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">ทุกความเร่งด่วน</SelectItem>
-                  <SelectItem value="critical">วิกฤติ</SelectItem>
-                  <SelectItem value="urgent">เร่งด่วน</SelectItem>
-                  <SelectItem value="normal">ปกติ</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="all">ทุกความเร่งด่วน</option>
+                <option value="critical">วิกฤติ</option>
+                <option value="urgent">เร่งด่วน</option>
+                <option value="normal">ปกติ</option>
+              </select>
             </div>
           </div>
         </Card>
@@ -391,61 +409,14 @@ export default function AdminSpareRequests({ embedded = false }: AdminSpareReque
 
         {/* Quick Link */}
         <div className="flex gap-3">
-          {!embedded && (
-            <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/dashboard")}>
-              <LayoutDashboard className="h-4 w-4" />Dashboard Admin
-            </Button>
-          )}
+          <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/dashboard")}>
+            <LayoutDashboard className="h-4 w-4" />Dashboard Admin
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => navigate("/spare-parts")}>
-            <Package className="h-4 w-4" />ระบบจัดการสต็อกอะไหล่
+            <Package className="h-4 w-4" />ระบบอะไหล่
           </Button>
         </div>
-    </div>
-  );
-
-  return (
-    <>
-      {!embedded ? (
-        <div className="min-h-screen bg-background flex flex-col">
-          {/* Header */}
-          <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
-            <div className="px-4 py-3 flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary-foreground hover:bg-white/10"
-                onClick={() => navigate("/admin/dashboard")}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="h-9 w-9 rounded-md bg-secondary grid place-items-center shrink-0">
-                <Package className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Admin</div>
-                <h1 className="font-bold truncate">ความต้องการอะไหล่จากช่าง</h1>
-              </div>
-              <div className="hidden sm:flex items-center gap-2">
-                {kpi.pending > 0 && (
-                  <span className="flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-semibold">
-                    <Clock className="h-3 w-3" /> รออนุมัติ {kpi.pending}
-                  </span>
-                )}
-                {kpi.critical > 0 && (
-                  <span className="flex items-center gap-1.5 rounded-full bg-red-500/20 border border-red-400/40 px-3 py-1 text-xs font-semibold">
-                    <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" /> วิกฤติ {kpi.critical}
-                  </span>
-                )}
-              </div>
-            </div>
-          </header>
-          <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
-            {bodyContent}
-          </main>
-        </div>
-      ) : (
-        bodyContent
-      )}
+      </main>
 
       {/* Modals */}
       {selected && <DetailDrawer item={selected} onClose={() => setSelected(null)} />}
@@ -456,6 +427,6 @@ export default function AdminSpareRequests({ embedded = false }: AdminSpareReque
           onConfirm={(reason) => handleReject(rejectTarget, reason)}
         />
       )}
-    </>
+    </div>
   );
 }
