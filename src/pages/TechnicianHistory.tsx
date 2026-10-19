@@ -1,13 +1,20 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, LogOut, History, Search, Filter,
+  ArrowLeft, History, Search, Filter,
   Wrench, Package, CheckCircle2, Clock, AlertTriangle,
   ChevronRight, Calendar, User, BarChart3, Download, FileSpreadsheet,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   TECHNICIAN_MAP,
@@ -50,6 +57,65 @@ const STATUS_DOT: Record<WorkRequest["status"], string> = {
   complete: "bg-emerald-500",
 };
 
+const STATUS_BADGE_CONFIG: Record<WorkRequest["status"], { label: string; className: string }> = {
+  open: {
+    label: "เปิดงาน",
+    className: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
+  },
+  doing: {
+    label: "กำลังซ่อม",
+    className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+  },
+  waiting: {
+    label: "รออะไหล่",
+    className: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800",
+  },
+  complete: {
+    label: "เสร็จสิ้น",
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+  },
+  assess: {
+    label: "ประเมินงาน",
+    className: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800",
+  },
+  done: {
+    label: "ซ่อมเสร็จ",
+    className: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800",
+  },
+  qc1: {
+    label: "รอ QC 1",
+    className: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800",
+  },
+  qc2: {
+    label: "รอ QC 2",
+    className: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200 dark:bg-fuchsia-950/40 dark:text-fuchsia-300 dark:border-fuchsia-800",
+  },
+};
+
+function TechnicianMiniAvatar({ techName }: { techName: string }) {
+  const isAlt = techName.includes("อานนท์") || techName.includes("เกรียงไกร");
+  return (
+    <svg className="w-full h-full" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="#EBF4FE" />
+      {/* Hair */}
+      <path d="M26 44 C26 20 38 14 50 14 C62 14 74 20 74 44 Z" fill={isAlt ? "#1E293B" : "#0F172A"} />
+      {/* Face */}
+      <circle cx="50" cy="46" r="22" fill="#FDE68A" />
+      {/* Hair front */}
+      <path d="M30 36 C34 25 45 22 50 22 C56 22 66 25 70 36 C64 30 57 28 50 28 C43 28 36 30 30 36 Z" fill={isAlt ? "#1E293B" : "#0F172A"} />
+      {/* Ears */}
+      <circle cx="28" cy="46" r="4" fill="#FCD34D" />
+      <circle cx="72" cy="46" r="4" fill="#FCD34D" />
+      {/* Blue uniform shirt */}
+      <path d="M22 92 C22 70 36 67 50 67 C64 67 78 70 78 92 Z" fill="#2563EB" />
+      {/* Collar & Inner shirt */}
+      <path d="M42 67 L50 80 L58 67 Z" fill="#1D4ED8" />
+      <path d="M36 67 L46 76 L44 67 Z" fill="#3B82F6" />
+      <path d="M64 67 L54 76 L56 67 Z" fill="#3B82F6" />
+    </svg>
+  );
+}
+
 const STATUS_ROW_BG: Partial<Record<WorkRequest["status"], string>> = {
   complete: "bg-emerald-50/30",
   waiting: "bg-rose-50/20",
@@ -71,49 +137,149 @@ function MiniKpi({ label, value, accentClass, icon }: {
   );
 }
 
-// ─── Technician Filter Bar ─────────────────────────────────────────────────────
+// ─── Modern Themed Filter Bar ───────────────────────────────────────────────
 
-function TechFilterChips({
-  techs, selected, onChange,
+function HistoryFilterBar({
+  search, setSearch,
+  techFilter, setTechFilter,
+  categoryFilter, setCategoryFilter,
+  statusFilter, setStatusFilter,
+  techs, categories,
 }: {
+  search: string;
+  setSearch: (v: string) => void;
+  techFilter: string;
+  setTechFilter: (v: string) => void;
+  categoryFilter: string;
+  setCategoryFilter: (v: string) => void;
+  statusFilter: "all" | "complete" | "in-progress";
+  setStatusFilter: (v: "all" | "complete" | "in-progress") => void;
   techs: { id: string; name: string }[];
-  selected: string;
-  onChange: (id: string) => void;
+  categories: string[];
 }) {
+  const hasActiveFilters = Boolean(search || techFilter !== "all" || categoryFilter !== "all" || statusFilter !== "all");
+
+  const clearFilters = () => {
+    setSearch("");
+    setTechFilter("all");
+    setCategoryFilter("all");
+    setStatusFilter("all");
+  };
+
   return (
-    <div className="flex gap-2 flex-wrap">
-      <button
-        onClick={() => onChange("all")}
-        className={cn(
-          "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-          selected === "all"
-            ? "bg-primary text-primary-foreground border-primary"
-            : "bg-background border-border text-muted-foreground hover:border-primary/50"
-        )}
-      >
-        ช่างทุกคน
-      </button>
-      {techs.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => onChange(t.id)}
-          className={cn(
-            "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-            selected === t.id
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background border-border text-muted-foreground hover:border-primary/50"
+    <Card className="p-3 sm:p-3.5 rounded-2xl border border-border/80 shadow-2xs bg-card space-y-2.5">
+      <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:items-center">
+        {/* Search Input */}
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-9 pr-8 h-9.5 rounded-xl bg-background border-border/80 hover:border-blue-300 dark:hover:border-blue-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm transition-all"
+            placeholder="ค้นหาช่าง, งาน, เครื่องจักร..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs p-1"
+              title="ล้างข้อความค้นหา"
+            >
+              ✕
+            </button>
           )}
-        >
-          {t.name.split(" ")[0]}
-        </button>
-      ))}
-    </div>
+        </div>
+
+        {/* Dropdowns Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex items-center gap-2 shrink-0">
+          {/* 1. Technician Dropdown */}
+          <Select value={techFilter} onValueChange={setTechFilter}>
+            <SelectTrigger className="w-full lg:w-[175px] h-9.5 rounded-xl bg-background border-border/80 hover:border-blue-400 dark:hover:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs sm:text-sm font-medium transition-all shadow-2xs cursor-pointer">
+              <div className="flex items-center gap-1.5 truncate">
+                <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                <SelectValue placeholder="ช่างทุกคน" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="max-h-64 rounded-xl shadow-lg border border-border/80 bg-popover/98 backdrop-blur-md">
+              <SelectItem value="all" className="text-xs sm:text-sm font-semibold cursor-pointer">
+                ช่างทุกคน
+              </SelectItem>
+              {techs.map((t) => (
+                <SelectItem key={t.id} value={t.id} className="text-xs sm:text-sm cursor-pointer">
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* 2. Category Dropdown */}
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full lg:w-[160px] h-9.5 rounded-xl bg-background border-border/80 hover:border-blue-400 dark:hover:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs sm:text-sm font-medium transition-all shadow-2xs cursor-pointer">
+              <div className="flex items-center gap-1.5 truncate">
+                <Wrench className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
+                <SelectValue placeholder="ทุกหมวดงาน" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="max-h-64 rounded-xl shadow-lg border border-border/80 bg-popover/98 backdrop-blur-md">
+              <SelectItem value="all" className="text-xs sm:text-sm font-semibold cursor-pointer">
+                ทุกหมวดงาน
+              </SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c} value={c} className="text-xs sm:text-sm cursor-pointer">
+                  {(CATEGORY_LABEL as Record<string, string>)[c] ?? c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* 3. Status Dropdown */}
+          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as "all" | "complete" | "in-progress")}>
+            <SelectTrigger className="w-full lg:w-[155px] h-9.5 rounded-xl bg-background border-border/80 hover:border-blue-400 dark:hover:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs sm:text-sm font-medium transition-all shadow-2xs cursor-pointer">
+              <div className="flex items-center gap-1.5 truncate">
+                <Filter className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
+                <SelectValue placeholder="ทุกสถานะ" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="max-h-64 rounded-xl shadow-lg border border-border/80 bg-popover/98 backdrop-blur-md">
+              <SelectItem value="all" className="text-xs sm:text-sm font-semibold cursor-pointer">
+                ทุกสถานะ
+              </SelectItem>
+              <SelectItem value="complete" className="text-xs sm:text-sm cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span>เสร็จสิ้น</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="in-progress" className="text-xs sm:text-sm cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+                  <span>กำลังดำเนินการ</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-9 px-3 text-xs text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors col-span-1 sm:col-span-3 lg:col-span-1 rounded-xl"
+            >
+              ล้างตัวกรอง
+            </Button>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+interface TechnicianHistoryProps {
+  embedded?: boolean;
+}
 
-export default function TechnicianHistory() {
+export default function TechnicianHistory({ embedded = false }: TechnicianHistoryProps = {}) {
   const navigate = useNavigate();
   const requests = useRequests();
 
@@ -214,7 +380,7 @@ export default function TechnicianHistory() {
 
   // Category options
   const categories = useMemo(() => {
-    const set = new Set(allRows.map((r) => r.category));
+    const set = new Set(allRows.map((r) => r.category).filter(Boolean));
     return Array.from(set);
   }, [allRows]);
 
@@ -246,34 +412,10 @@ export default function TechnicianHistory() {
     return d.toLocaleDateString("th-TH", { weekday: "short", day: "numeric", month: "long", year: "numeric" }) + label;
   };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
-        <div className="px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/admin/dashboard")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="h-9 w-9 rounded-md bg-secondary grid place-items-center shrink-0">
-            <History className="h-5 w-5 text-secondary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Admin</div>
-            <h1 className="font-bold truncate">ประวัติการทำงานของช่าง</h1>
-          </div>
-          <span className="hidden sm:block rounded-full bg-white/10 px-3 py-1 text-xs font-medium">
-            ทั้งหมด {allRows.length} รายการ
-          </span>
-          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/")}>
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-      </header>
-
-      <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
-
-        {/* KPI */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  const bodyContent = (
+    <div className="space-y-6">
+      {/* KPI */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <MiniKpi label="งานทั้งหมด" value={kpi.total} accentClass="border-l-primary" icon={<Wrench className="h-5 w-5" />} />
           <MiniKpi label="เสร็จสิ้น" value={kpi.done} accentClass="border-l-emerald-500" icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />} />
           <MiniKpi label="อัตราปิดงาน" value={`${kpi.completionRate}%`} accentClass="border-l-cyan-500" icon={<BarChart3 className="h-5 w-5 text-cyan-500" />} />
@@ -282,7 +424,7 @@ export default function TechnicianHistory() {
 
         {/* Tabs & Export */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-2 sm:pb-0">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none w-full sm:w-auto">
             {[
               { key: "timeline", label: "📋 Timeline รายงาน" },
               { key: "table",    label: "📑 ตารางรายงาน" },
@@ -324,35 +466,19 @@ export default function TechnicianHistory() {
         {/* ─── Tab: Timeline ─── */}
         {activeTab === "timeline" && (
           <>
-            {/* Filters */}
-            <Card className="p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input className="pl-9 h-9" placeholder="ค้นหาช่าง, งาน, เครื่องจักร..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                </div>
-                <select
-                  className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="all">ทุกหมวดงาน</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{(CATEGORY_LABEL as Record<string, string>)[c] ?? c}</option>
-                  ))}
-                </select>
-                <select
-                  className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as "all" | "complete" | "in-progress")}
-                >
-                  <option value="all">ทุกสถานะ</option>
-                  <option value="complete">เสร็จสิ้น</option>
-                  <option value="in-progress">กำลังดำเนินการ</option>
-                </select>
-              </div>
-              <TechFilterChips techs={techs} selected={techFilter} onChange={setTechFilter} />
-            </Card>
+            {/* Modern Themed Filters */}
+            <HistoryFilterBar
+              search={search}
+              setSearch={setSearch}
+              techFilter={techFilter}
+              setTechFilter={setTechFilter}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              techs={techs}
+              categories={categories}
+            />
 
             <div className="text-xs text-muted-foreground px-1">{filtered.length} รายการ</div>
 
@@ -364,7 +490,8 @@ export default function TechnicianHistory() {
                 Object.entries(grouped).map(([date, rows]) => (
                   <div key={date} className="relative">
                     {/* Date Header */}
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="ml-1 sm:ml-2 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-primary/20 shrink-0" />
                       <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-3 py-1">
                         <Calendar className="h-3.5 w-3.5" />
                         <span className="text-xs font-semibold">{formatDate(date)}</span>
@@ -372,52 +499,98 @@ export default function TechnicianHistory() {
                       <span className="text-xs text-muted-foreground">{rows.length} งาน</span>
                     </div>
 
-                    {/* Timeline items */}
-                    <div className="ml-4 border-l-2 border-dashed border-border pl-6 space-y-3">
-                      {rows.map((row) => (
-                        <div key={row.request_id} className={cn(
-                          "relative flex items-start gap-3 rounded-xl p-4 border transition-all hover:shadow-sm cursor-pointer",
-                          STATUS_ROW_BG[row.status] ?? "bg-card"
-                        )}
-                          onClick={() => navigate(`/admin/technician/${row.tech_id}`)}
-                        >
-                          {/* Timeline dot */}
-                          <div className={cn("absolute -left-9 top-5 h-3 w-3 rounded-full border-2 border-background", STATUS_DOT[row.status])} />
+                    {/* Timeline items / Cards matching Image 2 with vertical line going down in front of cards */}
+                    <div className="relative ml-2 sm:ml-3 border-l-2 border-dashed border-slate-300 dark:border-slate-700 pl-6 space-y-3">
+                      {rows.map((row) => {
+                        const badge = STATUS_BADGE_CONFIG[row.status] || {
+                          label: STATUS_LABEL[row.status] || row.status,
+                          className: "bg-slate-50 text-slate-700 border-slate-200",
+                        };
 
-                          {/* Avatar */}
-                          <div className="h-8 w-8 rounded-full bg-gradient-primary grid place-items-center text-primary-foreground text-xs font-bold shrink-0">
-                            {row.tech_name.charAt(0)}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                              <span className="font-mono text-xs text-primary">{row.request_id}</span>
-                              <span className={cn(
-                                "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                                row.status === "complete" ? "bg-emerald-100 text-emerald-700" :
-                                row.status === "waiting" ? "bg-rose-100 text-rose-700" :
-                                row.status === "doing" ? "bg-cyan-100 text-cyan-700" : "bg-gray-100 text-gray-600"
-                              )}>
-                                <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[row.status])} />
-                                {STATUS_LABEL[row.status]}
-                              </span>
-                              {row.spare_count > 0 && (
-                                <span className="flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs">
-                                  <Package className="h-3 w-3" />{row.spare_count} รายการ
-                                </span>
+                        return (
+                          <div key={row.request_id} className="relative group">
+                            {/* Timeline Status Dot positioned on the vertical line */}
+                            <div
+                              className={cn(
+                                "absolute -left-8 top-5 sm:top-6 h-3.5 w-3.5 rounded-full border-2 border-background ring-4 ring-muted/50 shadow-xs z-10 transition-transform group-hover:scale-125",
+                                STATUS_DOT[row.status] || "bg-primary"
                               )}
-                            </div>
-                            <p className="text-sm font-medium text-foreground">{row.asset_name}</p>
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-                              <span className="flex items-center gap-1"><User className="h-3 w-3" />{row.tech_name}</span>
-                              <span>{row.asset_location}</span>
-                              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{timeAgo(row.reported_time)}</span>
-                              <span>{(CATEGORY_LABEL as Record<string, string>)[row.category] ?? row.category}</span>
+                              title={`สถานะ: ${badge.label}`}
+                            />
+
+                            <div
+                              onClick={() => navigate(`/admin/technician/${row.tech_id}`, { state: { from: "technician-history" } })}
+                              className="rounded-2xl border border-border/80 bg-card p-3 sm:p-4 shadow-2xs hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer"
+                            >
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
+                              {/* ─── Column 1: Request Info (Initial circle, REQ ID, Badges, Issue summary) ─── */}
+                              <div className="flex items-start sm:items-center gap-3 min-w-0 md:w-[42%] md:pr-4">
+                                {/* Circle Avatar with Tech initial */}
+                                <div className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-base flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-slate-700 shadow-2xs">
+                                  {row.tech_name.charAt(0)}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-bold text-sm sm:text-base text-foreground font-mono tracking-tight leading-none mb-1.5">
+                                    {row.request_id}
+                                  </p>
+
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border", badge.className)}>
+                                      [ {badge.label} ]
+                                    </span>
+
+                                    {row.spare_count > 0 && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
+                                        [ {row.spare_count} รายการ ]
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-1 truncate">
+                                    {row.issue_summary}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* ─── Column 2: Asset / Machine Info (Asset ID, Location) ─── */}
+                              <div className="border-t md:border-t-0 md:border-l border-border/70 pt-2.5 md:pt-0 md:px-5 md:w-[30%] min-w-0">
+                                <h4 className="font-bold text-sm sm:text-base text-foreground tracking-tight leading-snug truncate">
+                                  {row.asset_name}
+                                </h4>
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 truncate">
+                                  {row.asset_location}
+                                </p>
+                              </div>
+
+                              {/* ─── Column 3: Tech Info, Time ago, Category, Chevron ─── */}
+                              <div className="border-t md:border-t-0 md:border-l border-border/70 pt-2.5 md:pt-0 md:pl-5 md:w-[28%] flex items-center justify-between min-w-0">
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-border/80 bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center shadow-2xs">
+                                    <TechnicianMiniAvatar techName={row.tech_name} />
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-xs sm:text-sm text-foreground truncate leading-snug">
+                                      {row.tech_name}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1 truncate">
+                                      <span>เมื่อ {timeAgo(row.reported_time)}</span>
+                                      <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground truncate">
+                                      {(CATEGORY_LABEL as Record<string, string>)[row.category] ?? row.category}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 ml-2 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-transform" />
+                              </div>
                             </div>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
                   </div>
                 ))
@@ -429,35 +602,19 @@ export default function TechnicianHistory() {
         {/* ─── Tab: Table Report (ตารางรายงาน) ─── */}
         {activeTab === "table" && (
           <div className="space-y-4">
-            {/* Filters */}
-            <Card className="p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input className="pl-9 h-9" placeholder="ค้นหาช่าง, งาน, เครื่องจักร..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                </div>
-                <select
-                  className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="all">ทุกหมวดงาน</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{(CATEGORY_LABEL as Record<string, string>)[c] ?? c}</option>
-                  ))}
-                </select>
-                <select
-                  className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as "all" | "complete" | "in-progress")}
-                >
-                  <option value="all">ทุกสถานะ</option>
-                  <option value="complete">เสร็จสิ้น</option>
-                  <option value="in-progress">กำลังดำเนินการ</option>
-                </select>
-              </div>
-              <TechFilterChips techs={techs} selected={techFilter} onChange={setTechFilter} />
-            </Card>
+            {/* Modern Themed Filters */}
+            <HistoryFilterBar
+              search={search}
+              setSearch={setSearch}
+              techFilter={techFilter}
+              setTechFilter={setTechFilter}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              techs={techs}
+              categories={categories}
+            />
 
             {/* Table */}
             <Card className="overflow-hidden">
@@ -468,8 +625,9 @@ export default function TechnicianHistory() {
                 </div>
                 <span className="text-xs text-muted-foreground font-mono">{filtered.length} รายการ</span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              {/* Desktop/Tablet Table (>= sm) */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm min-w-[640px]">
                   <thead>
                     <tr className="border-b bg-muted/20 text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="px-4 py-3 text-left font-medium">วันที่</th>
@@ -549,7 +707,7 @@ export default function TechnicianHistory() {
                               size="sm"
                               variant="ghost"
                               className="h-7 px-2 text-xs text-primary hover:bg-primary/10"
-                              onClick={() => navigate(`/admin/technician/${row.tech_id}`)}
+                              onClick={() => navigate(`/admin/technician/${row.tech_id}`, { state: { from: "technician-history" } })}
                             >
                               ดูประวัติช่าง <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
                             </Button>
@@ -560,6 +718,51 @@ export default function TechnicianHistory() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Card List (< sm) */}
+              <div className="sm:hidden divide-y divide-border/60">
+                {filtered.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground text-sm">
+                    ไม่พบรายการที่ตรงกับเงื่อนไข
+                  </div>
+                ) : (
+                  filtered.map((row) => (
+                    <div key={row.request_id} className="p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs text-primary font-bold">{row.request_id}</span>
+                        <span className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                          row.status === "complete" ? "bg-emerald-100 text-emerald-700" :
+                          row.status === "waiting" ? "bg-rose-100 text-rose-700" :
+                          row.status === "doing" ? "bg-cyan-100 text-cyan-700" : "bg-gray-100 text-gray-600"
+                        )}>
+                          <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[row.status])} />
+                          {STATUS_LABEL[row.status]}
+                        </span>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-bold text-foreground">{row.asset_name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{row.issue_summary}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+                        <span>ช่าง: <strong className="text-foreground">{row.tech_name}</strong></span>
+                        <span>{row.reported_time.split("T")[0]}</span>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full h-8 text-xs text-primary hover:bg-primary/10 border border-primary/20"
+                        onClick={() => navigate(`/admin/technician/${row.tech_id}`, { state: { from: "technician-history" } })}
+                      >
+                        ดูประวัติช่าง <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
             </Card>
           </div>
         )}
@@ -568,16 +771,27 @@ export default function TechnicianHistory() {
         {activeTab === "summary" && (
           <div className="space-y-4">
             {techSummary.map((t) => (
-              <Card key={t.id} className="p-5">
-                <div className="flex items-start gap-4">
-                  {/* Avatar */}
-                  <div className="h-12 w-12 rounded-full bg-gradient-primary grid place-items-center text-primary-foreground font-bold text-lg shrink-0">
-                    {t.name.charAt(0)}
+              <Card key={t.id} className="p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3.5 sm:gap-4">
+                  <div className="flex items-center gap-3 sm:block shrink-0">
+                    {/* Avatar */}
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-primary grid place-items-center text-primary-foreground font-bold text-base sm:text-lg shrink-0">
+                      {t.name.charAt(0)}
+                    </div>
+                    <div className="sm:hidden min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm truncate">{t.name}</p>
+                        <span className="font-mono text-xs text-muted-foreground">{t.id}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        อัตราปิดงาน: <strong className="text-foreground">{t.rate}%</strong>
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <p className="font-semibold">{t.name}</p>
+                    <div className="hidden sm:flex flex-wrap items-center gap-2 mb-1">
+                      <p className="font-semibold text-sm">{t.name}</p>
                       <span className="font-mono text-xs text-muted-foreground">{t.id}</span>
                     </div>
 
@@ -589,18 +803,18 @@ export default function TechnicianHistory() {
                       <span className="text-xs font-semibold w-10 text-right">{t.rate}%</span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center text-xs">
                       <div className="rounded-lg bg-muted py-2">
-                        <p className="text-base font-bold">{t.total}</p>
-                        <p className="text-muted-foreground">งานทั้งหมด</p>
+                        <p className="text-base font-bold tabular-nums">{t.total}</p>
+                        <p className="text-muted-foreground text-[11px]">งานทั้งหมด</p>
                       </div>
                       <div className="rounded-lg bg-emerald-50 py-2">
-                        <p className="text-base font-bold text-emerald-700">{t.done}</p>
-                        <p className="text-emerald-600">เสร็จสิ้น</p>
+                        <p className="text-base font-bold text-emerald-700 tabular-nums">{t.done}</p>
+                        <p className="text-emerald-600 text-[11px]">เสร็จสิ้น</p>
                       </div>
                       <div className="rounded-lg bg-amber-50 py-2">
-                        <p className="text-base font-bold text-amber-700">{t.withSpares}</p>
-                        <p className="text-amber-600">ใช้อะไหล่</p>
+                        <p className="text-base font-bold text-amber-700 tabular-nums">{t.withSpares}</p>
+                        <p className="text-amber-600 text-[11px]">ใช้อะไหล่</p>
                       </div>
                     </div>
                   </div>
@@ -608,8 +822,8 @@ export default function TechnicianHistory() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="shrink-0"
-                    onClick={() => navigate(`/admin/technician/${t.id}`)}
+                    className="w-full sm:w-auto shrink-0 sm:self-center"
+                    onClick={() => navigate(`/admin/technician/${t.id}`, { state: { from: "technician-history" } })}
                   >
                     ดูรายละเอียด <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
@@ -620,14 +834,46 @@ export default function TechnicianHistory() {
         )}
 
         {/* Footer nav */}
-        <div className="flex flex-wrap gap-3 pb-4">
-          <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/dashboard")}>
-            <BarChart3 className="h-4 w-4" />Admin Dashboard
+        {!embedded && (
+          <div className="flex flex-wrap gap-3 pb-4">
+            <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/dashboard")}>
+              <BarChart3 className="h-4 w-4" />Admin Dashboard
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/spare-requests")}>
+              <Package className="h-4 w-4" />ความต้องการอะไหล่
+            </Button>
+          </div>
+        )}
+    </div>
+  );
+
+  if (embedded) {
+    return bodyContent;
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/admin/dashboard")}>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Button variant="outline" className="gap-2" onClick={() => navigate("/admin/spare-requests")}>
-            <Package className="h-4 w-4" />ความต้องการอะไหล่
-          </Button>
+          <div className="h-9 w-9 rounded-md bg-secondary grid place-items-center shrink-0">
+            <History className="h-5 w-5 text-secondary-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Admin</div>
+            <h1 className="font-bold truncate">ประวัติการทำงานของช่าง</h1>
+          </div>
+          <span className="hidden sm:block rounded-full bg-white/10 px-3 py-1 text-xs font-medium">
+            ทั้งหมด {allRows.length} รายการ
+          </span>
         </div>
+      </header>
+
+      <main className="flex-1 p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
+        {bodyContent}
       </main>
     </div>
   );

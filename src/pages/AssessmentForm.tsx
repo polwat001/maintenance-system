@@ -16,8 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
+import { cn } from "@/lib/utils";
 import {
   Accordion,
   AccordionContent,
@@ -31,6 +33,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   Calendar,
@@ -54,6 +62,8 @@ import {
   Gauge,
   MessageSquare,
   AlertTriangle,
+  X,
+  ZoomIn,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -606,20 +616,25 @@ function AssessmentVisitFields({
 }) {
   return (
     <div className="space-y-4">
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-2 gap-3 items-start">
         <div className="space-y-1.5">
-          <Label className="flex items-center gap-1 text-xs"><Calendar className="h-3 w-3" /> วันที่เข้าประเมินหน้างาน</Label>
-          <Input
-            type="date"
+          <Label className="flex items-center gap-1.5 text-xs h-5">
+            <Calendar className="h-3.5 w-3.5" /> วันที่เข้าประเมินหน้างาน
+          </Label>
+          <DatePicker
             value={visitDate}
-            onChange={(e) => setVisitDate(e.target.value)}
+            onChange={setVisitDate}
             disabled={locked}
+            placeholder="เลือกวันที่เข้าประเมิน"
+            className="h-10"
           />
           {locked && <p className="text-[11px] text-muted-foreground">ล็อกวันที่จากคำขอเดิม: {accessDateSource || visitDate}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">ระดับความสำคัญของงาน</Label>
-          <div className="grid grid-cols-2 gap-2">
+          <Label className="flex items-center gap-1.5 text-xs h-5">
+            <ShieldAlert className="h-3.5 w-3.5" /> ระดับความสำคัญของงาน
+          </Label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { value: "critical", label: "Critical" },
               { value: "hot", label: "Hot" },
@@ -631,6 +646,7 @@ function AssessmentVisitFields({
                 type="button"
                 variant={priorityLevel === item.value ? "default" : "outline"}
                 onClick={() => setPriorityLevel(item.value as PriorityLevel)}
+                className="h-10 px-2"
               >
                 {item.label}
               </Button>
@@ -673,6 +689,15 @@ function OnSiteAssessmentFields({
   temporaryMeasure: string;
   setTemporaryMeasure: (v: string) => void;
 }) {
+  const repairDaysCount = useMemo(() => {
+    if (!repairStartDate || !repairEndDate) return null;
+    const start = new Date(repairStartDate).getTime();
+    const end = new Date(repairEndDate).getTime();
+    if (isNaN(start) || isNaN(end)) return null;
+    const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    return diff > 0 ? diff : 0;
+  }, [repairStartDate, repairEndDate]);
+
   return (
     <div className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-3">
@@ -697,25 +722,79 @@ function OnSiteAssessmentFields({
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-2 gap-3 items-start">
         <div className="space-y-1.5">
-          <Label className="text-xs">สถานะเครื่องขณะรอ</Label>
+          <Label className="flex items-center gap-1.5 text-xs h-5">
+            <Wrench className="h-3.5 w-3.5" /> สถานะเครื่องขณะรอ
+          </Label>
           <div className="grid grid-cols-1 gap-2">
-            <Button type="button" variant={machineState === "temporary-operable" ? "default" : "outline"} onClick={() => setMachineState("temporary-operable")}>ใช้งานได้ (ชั่วคราว)</Button>
-            <Button type="button" variant={machineState === "stopped" ? "default" : "outline"} onClick={() => setMachineState("stopped")}>หยุดใช้งาน</Button>
-            <Button type="button" variant={machineState === "limited-condition" ? "default" : "outline"} onClick={() => setMachineState("limited-condition")}>ใช้งานแบบจำกัดเงื่อนไข</Button>
+            <Button
+              type="button"
+              variant={machineState === "temporary-operable" ? "default" : "outline"}
+              onClick={() => setMachineState("temporary-operable")}
+              className="h-10 justify-center"
+            >
+              ใช้งานได้ (ชั่วคราว)
+            </Button>
+            <Button
+              type="button"
+              variant={machineState === "stopped" ? "default" : "outline"}
+              onClick={() => setMachineState("stopped")}
+              className="h-10 justify-center"
+            >
+              หยุดใช้งาน
+            </Button>
+            <Button
+              type="button"
+              variant={machineState === "limited-condition" ? "default" : "outline"}
+              onClick={() => setMachineState("limited-condition")}
+              className="h-10 justify-center"
+            >
+              ใช้งานแบบจำกัดเงื่อนไข
+            </Button>
           </div>
         </div>
+
         <div className="space-y-1.5">
-          <Label className="text-xs">จำนวนวันซ่อม</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-[11px] text-muted-foreground">เริ่ม</Label>
-              <Input type="date" value={repairStartDate} onChange={(e) => setRepairStartDate(e.target.value)} />
+          <Label className="flex items-center gap-1.5 text-xs h-5">
+            <Calendar className="h-3.5 w-3.5" /> จำนวนวันซ่อม
+            {repairDaysCount !== null && (
+              <span className="text-muted-foreground font-normal ml-auto">({repairDaysCount} วัน)</span>
+            )}
+          </Label>
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex h-10 w-full rounded-md border border-input bg-card overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="flex items-center justify-center w-16 bg-muted/40 border-r border-input text-xs font-medium text-muted-foreground select-none shrink-0">
+                เริ่ม
+              </span>
+              <DatePicker
+                variant="inline"
+                value={repairStartDate}
+                disablePast
+                onChange={(val) => {
+                  setRepairStartDate(val);
+                  if (repairEndDate && val && repairEndDate < val) {
+                    setRepairEndDate(val);
+                  }
+                }}
+                placeholder="เลือกวันเริ่มต้น"
+                className="flex-1"
+              />
             </div>
-            <div>
-              <Label className="text-[11px] text-muted-foreground">สิ้นสุด</Label>
-              <Input type="date" value={repairEndDate} onChange={(e) => setRepairEndDate(e.target.value)} />
+
+            <div className="flex h-10 w-full rounded-md border border-input bg-card overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <span className="flex items-center justify-center w-16 bg-muted/40 border-r border-input text-xs font-medium text-muted-foreground select-none shrink-0">
+                สิ้นสุด
+              </span>
+              <DatePicker
+                variant="inline"
+                value={repairEndDate}
+                disablePast
+                minDate={repairStartDate}
+                onChange={setRepairEndDate}
+                placeholder="เลือกวันสิ้นสุด"
+                className="flex-1"
+              />
             </div>
           </div>
         </div>
@@ -790,6 +869,8 @@ function AssessmentPhotoPicker({
   removeAssessmentPhoto: (id: string) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
 }) {
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 p-3 rounded-md border-2 border-dashed border-border">
@@ -805,12 +886,40 @@ function AssessmentPhotoPicker({
       </div>
 
       {photos.length > 0 ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-3 p-3 rounded-lg border border-border/70 bg-muted/20 min-h-[140px]",
+            photos.length === 1 ? "justify-center" : "justify-start"
+          )}
+        >
           {photos.map((photo) => (
-            <div key={photo.attachment_id} className="relative rounded-md overflow-hidden border group">
-              <img src={photo.url} alt={photo.name} className="h-28 w-full object-cover" />
-              <button type="button" onClick={() => removeAssessmentPhoto(photo.attachment_id)} className="absolute top-1 right-1 rounded bg-black/70 text-white text-[10px] px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                ลบ
+            <div
+              key={photo.attachment_id}
+              className="relative rounded-lg overflow-hidden border border-border bg-card shadow-sm p-1.5 flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 group cursor-pointer hover:border-primary/60 hover:shadow-md transition-all"
+              onClick={() => setPreviewImage({ url: photo.url, name: photo.name })}
+              title="คลิกเพื่อดูรูปภาพขนาดใหญ่"
+            >
+              <img
+                src={photo.url}
+                alt={photo.name}
+                className="max-h-full max-w-full object-contain rounded pointer-events-none select-none"
+              />
+              <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none rounded-lg">
+                <div className="bg-black/60 text-white rounded-full p-2 backdrop-blur-sm shadow-sm flex items-center gap-1 text-xs">
+                  <ZoomIn className="h-4 w-4" />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeAssessmentPhoto(photo.attachment_id);
+                }}
+                className="absolute top-1.5 right-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-destructive-foreground p-1 text-xs opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-sm z-10"
+                title="ลบรูปภาพ"
+                aria-label="ลบรูปภาพ"
+              >
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -821,6 +930,40 @@ function AssessmentPhotoPicker({
           ยังไม่มีรูปประกอบการประเมิน
         </div>
       )}
+
+      {/* Lightbox Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-2xl sm:max-w-3xl p-4 sm:p-5">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="text-sm sm:text-base font-semibold flex items-center gap-2 pr-6 truncate">
+              <Camera className="h-4 w-4 text-primary shrink-0" />
+              <span className="truncate">{previewImage?.name || "รูปภาพประกอบ"}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex items-center justify-center max-h-[70vh] rounded-lg bg-muted/30 border p-2 overflow-hidden">
+            {previewImage && (
+              <img
+                src={previewImage.url}
+                alt={previewImage.name}
+                className="max-h-[65vh] max-w-full w-auto object-contain rounded"
+              />
+            )}
+          </div>
+
+          <div className="flex items-center justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
+            <span>ตรวจสอบความถูกต้องของรูปภาพ</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewImage(null)}
+            >
+              ปิด
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

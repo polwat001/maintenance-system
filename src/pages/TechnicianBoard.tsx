@@ -74,7 +74,18 @@ export default function TechnicianBoard() {
   const isPanningRef = useRef(false);
   const panStartXRef = useRef(0);
   const panStartScrollLeftRef = useRef(0);
-  const currentTech = (JSON.parse(sessionStorage.getItem("fixflow_user") ?? "{}") as { emp_id?: string }).emp_id || "TECH001";
+  const sessionUser = JSON.parse(sessionStorage.getItem("fixflow_user") ?? "{}") as {
+    emp_id?: string;
+    name?: string;
+  };
+  const currentTech = sessionUser.emp_id || "TECH001";
+  const currentTechName = sessionUser.name || "สมศักดิ์ ช่างไฟ";
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("fixflow_user");
+    toast.success("ออกจากระบบเรียบร้อยแล้ว");
+    navigate("/");
+  };
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"all" | WorkRequest["priority"]>("all");
   const [categoryFilter, setCategoryFilter] = useState<"all" | WorkRequest["category"]>("all");
@@ -213,111 +224,158 @@ export default function TechnicianBoard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <header className="sticky top-0 z-20 bg-gradient-primary text-primary-foreground shadow-md">
-        <div className="container py-3 flex items-center gap-3">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
           <div className="h-9 w-9 rounded-md bg-secondary grid place-items-center shrink-0">
             <Wrench className="h-5 w-5 text-secondary-foreground" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Technician Board</div>
-            <h1 className="font-bold truncate">สมศักดิ์ ช่างไฟ · TECH001</h1>
+            <h1 className="font-bold truncate">{currentTechName} · {currentTech}</h1>
           </div>
-          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10 relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-primary-foreground hover:bg-white/10 relative"
+            onClick={() => navigate("/notifications")}
+            aria-label="ศูนย์แจ้งเตือน"
+          >
             <Bell className="h-5 w-5" />
             {counts.critical > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-priority-critical priority-pulse" />}
           </Button>
-          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10" onClick={() => navigate("/")} aria-label="ออกจากระบบ">
-            <LogOut className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-2 sm:px-3 text-primary-foreground/90 hover:text-white hover:bg-white/10 gap-1.5 text-xs sm:text-sm font-medium transition-colors shrink-0"
+            onClick={handleLogout}
+            title="ออกจากระบบ"
+            aria-label="ออกจากระบบ"
+          >
+            <LogOut className="h-4 w-4 text-rose-300" />
+            <span className="hidden sm:inline">ออกจากระบบ</span>
           </Button>
         </div>
       </header>
 
-      <div className="container py-4 space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px]">
+      <div className="container py-4 space-y-4 max-w-full">
+        <div className="grid grid-cols-2 sm:grid-cols-10 2xl:flex 2xl:flex-nowrap 2xl:items-center gap-2">
+          {/* 1. Search Bar */}
+          <div className="col-span-2 sm:col-span-7 lg:col-span-8 2xl:flex-1 relative min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="ค้นหารหัสงาน, เครื่องจักร, อาการ..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="pl-9 h-10 bg-card"
+              className="pl-9 h-10 bg-card w-full"
             />
           </div>
-          <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as "all" | WorkRequest["priority"]) }>
-            <SelectTrigger className="w-[160px] h-10 bg-card">
-              <Filter className="h-4 w-4 mr-1" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกความสำคัญ</SelectItem>
-              <SelectItem value="critical">🔴 วิกฤติ</SelectItem>
-              <SelectItem value="high">🟠 สูง</SelectItem>
-              <SelectItem value="medium">🔵 ปานกลาง</SelectItem>
-              <SelectItem value="low">⚪ ต่ำ</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as "all" | WorkRequest["category"]) }>
-            <SelectTrigger className="w-[180px] h-10 bg-card">
-              <SelectValue placeholder="ทุกหมวดหมู่" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
-              {Object.entries(CATEGORY_LABEL).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={responsibleFilter} onValueChange={(value) => setResponsibleFilter(value as "all" | "mine" | "unassigned") }>
-            <SelectTrigger className="w-[160px] h-10 bg-card">
-              <SelectValue placeholder="ผู้รับผิดชอบ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกงาน</SelectItem>
-              <SelectItem value="mine">งานของฉัน</SelectItem>
-              <SelectItem value="unassigned">ยังไม่รับงาน</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={subStatusFilter} onValueChange={(value) => setSubStatusFilter(value as "all" | SubStatus) }>
-            <SelectTrigger className="w-[170px] h-10 bg-card">
-              <SelectValue placeholder="สถานะย่อย" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">ทุกสถานะย่อย</SelectItem>
-              {Object.entries(SUB_STATUS_LABEL).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={timeSort} onValueChange={(value) => setTimeSort(value as "reported-desc" | "reported-asc") }>
-            <SelectTrigger className="w-[170px] h-10 bg-card">
-              <SelectValue placeholder="เรียงเวลา" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="reported-desc">ใหม่สุดก่อน</SelectItem>
-              <SelectItem value="reported-asc">เก่าสุดก่อน</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="ml-auto inline-flex items-center rounded-md border bg-card p-1">
-            <Button variant={view === "kanban" ? "industrial" : "ghost"} size="sm" onClick={() => setView("kanban") }>
-              <LayoutGrid className="mr-1 h-4 w-4" />
-              Kanban
+
+          {/* 2. View Toggle (Row 1 on iPad/MacBook with sm:col-span-3 lg:col-span-2, far-right on wide screens with 2xl:order-last) */}
+          <div className="col-span-2 sm:col-span-3 lg:col-span-2 2xl:order-last 2xl:ml-auto inline-flex items-center gap-1.5 rounded-md border bg-card p-1 h-10 w-full 2xl:w-auto shrink-0">
+            <Button
+              variant={view === "kanban" ? "industrial" : "ghost"}
+              size="sm"
+              className="flex-1 2xl:flex-initial h-full text-xs sm:text-xs lg:text-sm font-medium px-2 sm:px-3 lg:px-4"
+              onClick={() => setView("kanban")}
+            >
+              <LayoutGrid className="h-4 w-4 shrink-0" />
+              <span>Kanban</span>
             </Button>
-            <Button variant={view === "list" ? "industrial" : "ghost"} size="sm" onClick={() => setView("list") }>
-              <List className="mr-1 h-4 w-4" />
-              List
+            <Button
+              variant={view === "list" ? "industrial" : "ghost"}
+              size="sm"
+              className="flex-1 2xl:flex-initial h-full text-xs sm:text-xs lg:text-sm font-medium px-2 sm:px-3 lg:px-4"
+              onClick={() => setView("list")}
+            >
+              <List className="h-4 w-4 shrink-0" />
+              <span>List</span>
             </Button>
+          </div>
+
+          {/* 3. Priority Filter (Row 2 on iPad/MacBook, 20% width) */}
+          <div className="col-span-1 sm:col-span-2 2xl:w-[155px] shrink-0 min-w-0">
+            <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as "all" | WorkRequest["priority"]) }>
+              <SelectTrigger className="w-full min-w-0 h-10 bg-card px-2 sm:px-2.5 lg:px-3 text-xs sm:text-xs lg:text-sm">
+                <Filter className="h-3.5 w-3.5 mr-1 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกความสำคัญ</SelectItem>
+                <SelectItem value="critical">🔴 วิกฤติ</SelectItem>
+                <SelectItem value="high">🟠 สูง</SelectItem>
+                <SelectItem value="medium">🔵 ปานกลาง</SelectItem>
+                <SelectItem value="low">⚪ ต่ำ</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 4. Category Filter (Row 2 on iPad/MacBook, 20% width) */}
+          <div className="col-span-1 sm:col-span-2 2xl:w-[165px] shrink-0 min-w-0">
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as "all" | WorkRequest["category"]) }>
+              <SelectTrigger className="w-full min-w-0 h-10 bg-card px-2 sm:px-2.5 lg:px-3 text-xs sm:text-xs lg:text-sm">
+                <SelectValue placeholder="ทุกหมวดหมู่" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
+                {Object.entries(CATEGORY_LABEL).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 5. Responsible Filter (Row 2 on iPad/MacBook, 20% width) */}
+          <div className="col-span-1 sm:col-span-2 2xl:w-[145px] shrink-0 min-w-0">
+            <Select value={responsibleFilter} onValueChange={(value) => setResponsibleFilter(value as "all" | "mine" | "unassigned") }>
+              <SelectTrigger className="w-full min-w-0 h-10 bg-card px-2 sm:px-2.5 lg:px-3 text-xs sm:text-xs lg:text-sm">
+                <SelectValue placeholder="ผู้รับผิดชอบ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกงาน</SelectItem>
+                <SelectItem value="mine">งานของฉัน</SelectItem>
+                <SelectItem value="unassigned">ยังไม่รับงาน</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 6. SubStatus Filter (Row 2 on iPad/MacBook, 20% width) */}
+          <div className="col-span-1 sm:col-span-2 2xl:w-[155px] shrink-0 min-w-0">
+            <Select value={subStatusFilter} onValueChange={(value) => setSubStatusFilter(value as "all" | SubStatus) }>
+              <SelectTrigger className="w-full min-w-0 h-10 bg-card px-2 sm:px-2.5 lg:px-3 text-xs sm:text-xs lg:text-sm">
+                <SelectValue placeholder="สถานะย่อย" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกสถานะย่อย</SelectItem>
+                {Object.entries(SUB_STATUS_LABEL).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 7. TimeSort Filter (Row 2 on iPad/MacBook, 20% width) */}
+          <div className="col-span-2 sm:col-span-2 2xl:w-[155px] shrink-0 min-w-0">
+            <Select value={timeSort} onValueChange={(value) => setTimeSort(value as "reported-desc" | "reported-asc") }>
+              <SelectTrigger className="w-full min-w-0 h-10 bg-card px-2 sm:px-2.5 lg:px-3 text-xs sm:text-xs lg:text-sm">
+                <SelectValue placeholder="เรียงเวลา" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="reported-desc">ใหม่สุดก่อน</SelectItem>
+                <SelectItem value="reported-asc">เก่าสุดก่อน</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {view === "kanban" ? (
           <div
             ref={kanbanScrollRef}
-            className="flex gap-4 overflow-x-auto pb-3 cursor-grab"
+            className="flex gap-3 sm:gap-4 overflow-x-auto pb-3 cursor-grab max-w-full min-w-0"
             onDragOver={handleKanbanDragOver}
             onMouseDown={handleKanbanMouseDown}
             onMouseMove={handleKanbanMouseMove}
@@ -330,7 +388,7 @@ export default function TechnicianBoard() {
                 <Card
                   key={column.key}
                   className={cn(
-                    "flex-none w-[20rem] rounded-xl border-t-4 bg-card/80 shadow-sm",
+                    "flex-none w-[82vw] sm:w-[20rem] max-w-[20rem] rounded-xl border-t-4 bg-card/80 shadow-sm",
                     column.accent,
                   )}
                   onDragOver={handleKanbanDragOver}

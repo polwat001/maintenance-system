@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Settings, Building2, Clock, Bell, DollarSign, Download, Plus,
   Edit2, Trash2, CheckCircle2, Shield, Save, RotateCcw, AlertTriangle, FileSpreadsheet
@@ -8,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   MOCK_MACHINES_MASTER,
@@ -196,7 +204,7 @@ export function SettingsSection() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <Settings className="h-6 w-6 text-purple-600" />
+            <Settings className="h-6 w-6 text-primary" />
             ตั้งค่าระบบ & Master Data (System Configuration)
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -220,7 +228,7 @@ export function SettingsSection() {
             onClick={() => setActiveTab(tab.key as any)}
             className={cn(
               "text-xs shrink-0",
-              activeTab === tab.key && "bg-purple-600 hover:bg-purple-700 text-white"
+              activeTab === tab.key && "bg-primary hover:bg-primary/90 text-primary-foreground"
             )}
           >
             {tab.icon}
@@ -236,7 +244,7 @@ export function SettingsSection() {
             <p className="text-sm font-semibold text-foreground">
               รายการเครื่องจักรในระบบทั้งหมด ({machines.length} เครื่อง)
             </p>
-            <Button onClick={openAddMachine} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
+            <Button onClick={openAddMachine} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs">
               <Plus className="h-4 w-4 mr-1" /> เพิ่มเครื่องจักรใหม่
             </Button>
           </div>
@@ -332,7 +340,7 @@ export function SettingsSection() {
         <form onSubmit={handleSaveConfig} className="space-y-6 max-w-2xl">
           <Card className="p-5 space-y-4">
             <h3 className="font-bold text-base flex items-center gap-2">
-              <Clock className="h-5 w-5 text-purple-600" />
+              <Clock className="h-5 w-5 text-primary" />
               เกณฑ์เวลา SLA ในการตอบสนองงานซ่อม (Response Time SLA)
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -388,7 +396,7 @@ export function SettingsSection() {
 
           <Card className="p-5 space-y-4">
             <h3 className="font-bold text-base flex items-center gap-2">
-              <Bell className="h-5 w-5 text-purple-600" />
+              <Bell className="h-5 w-5 text-primary" />
               การแจ้งเตือนและการยกระดับ (Notification & Escalation)
             </h3>
 
@@ -403,7 +411,7 @@ export function SettingsSection() {
                   aria-label="เปิดใช้งาน Auto Escalation"
                   checked={config.auto_escalation}
                   onChange={(e) => setConfig({ ...config, auto_escalation: e.target.checked })}
-                  className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
               </div>
 
@@ -417,7 +425,7 @@ export function SettingsSection() {
                   aria-label="เปิดใช้งาน LINE Notify"
                   checked={config.line_notify_enabled}
                   onChange={(e) => setConfig({ ...config, line_notify_enabled: e.target.checked })}
-                  className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
               </div>
 
@@ -431,13 +439,13 @@ export function SettingsSection() {
                   aria-label="เปิดใช้งานอีเมลแจ้งเตือน"
                   checked={config.email_notify_enabled}
                   onChange={(e) => setConfig({ ...config, email_notify_enabled: e.target.checked })}
-                  className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
               </div>
             </div>
           </Card>
 
-          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Save className="h-4 w-4 mr-1.5" /> บันทึกการตั้งค่า
           </Button>
         </form>
@@ -448,7 +456,7 @@ export function SettingsSection() {
         <form onSubmit={handleSaveConfig} className="space-y-6 max-w-2xl">
           <Card className="p-5 space-y-4">
             <h3 className="font-bold text-base flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-purple-600" />
+              <DollarSign className="h-5 w-5 text-primary" />
               การจัดการงบประมาณและขอบเขตอำนาจอนุมัติ PO
             </h3>
 
@@ -486,7 +494,7 @@ export function SettingsSection() {
             </div>
           </Card>
 
-          <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Save className="h-4 w-4 mr-1.5" /> บันทึกวงเงิน & งบประมาณ
           </Button>
         </form>
@@ -543,9 +551,9 @@ export function SettingsSection() {
             </div>
           </Card>
 
-          <Card className="p-5 space-y-4 border-l-4 border-l-purple-600">
+          <Card className="p-5 space-y-4 border-l-4 border-l-primary">
             <h3 className="font-bold text-base flex items-center gap-2">
-              <Download className="h-5 w-5 text-purple-600" />
+              <Download className="h-5 w-5 text-primary" />
               การสำรองข้อมูลทั้งระบบ (Complete System Snapshot Backup)
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -555,7 +563,7 @@ export function SettingsSection() {
             <div className="pt-2">
               <Button
                 onClick={exportFullSnapshotJSON}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Download className="h-4 w-4 mr-2" />
                 ดาวน์โหลด System Snapshot (.JSON)
@@ -566,9 +574,15 @@ export function SettingsSection() {
       )}
 
       {/* ── Machine Add/Edit Modal ── */}
-      {machineModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 bg-background space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+      {machineModalOpen && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setMachineModalOpen(false)}
+        >
+          <Card
+            className="w-full max-w-md p-6 bg-background space-y-4 shadow-2xl animate-in fade-in zoom-in-95 cursor-default max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start justify-between border-b pb-3">
               <div>
                 <h3 className="font-bold text-lg">
@@ -641,31 +655,37 @@ export function SettingsSection() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="machine-criticality-select" className="text-xs">ระดับความสำคัญ</Label>
-                  <select
-                    id="machine-criticality-select"
+                  <Select
                     value={machineForm.critical_level}
-                    onChange={(e) => setMachineForm({ ...machineForm, critical_level: e.target.value as any })}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                    onValueChange={(val) => setMachineForm({ ...machineForm, critical_level: val as any })}
                   >
-                    <option value="high">High (วิกฤติสูง)</option>
-                    <option value="medium">Medium (ปานกลาง)</option>
-                    <option value="low">Low (ทั่วไป)</option>
-                  </select>
+                    <SelectTrigger id="machine-criticality-select" className="w-full h-10 text-sm shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">High (วิกฤติสูง)</SelectItem>
+                      <SelectItem value="medium">Medium (ปานกลาง)</SelectItem>
+                      <SelectItem value="low">Low (ทั่วไป)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1">
                   <Label htmlFor="machine-status-select" className="text-xs">สถานะเครื่องจักร</Label>
-                  <select
-                    id="machine-status-select"
+                  <Select
                     value={machineForm.status}
-                    onChange={(e) => setMachineForm({ ...machineForm, status: e.target.value as any })}
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                    onValueChange={(val) => setMachineForm({ ...machineForm, status: val as any })}
                   >
-                    <option value="operational">ปกติ (Operational)</option>
-                    <option value="warning">เตือน (Warning)</option>
-                    <option value="down">หยุดทำงาน (Down)</option>
-                    <option value="maintenance">ซ่อมบำรุง (Maintenance)</option>
-                  </select>
+                    <SelectTrigger id="machine-status-select" className="w-full h-10 text-sm shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="operational">ปกติ (Operational)</SelectItem>
+                      <SelectItem value="warning">เตือน (Warning)</SelectItem>
+                      <SelectItem value="down">หยุดทำงาน (Down)</SelectItem>
+                      <SelectItem value="maintenance">ซ่อมบำรุง (Maintenance)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -673,13 +693,14 @@ export function SettingsSection() {
                 <Button type="button" variant="outline" onClick={() => setMachineModalOpen(false)}>
                   ยกเลิก
                 </Button>
-                <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   {editingMachine ? "บันทึกการแก้ไข" : "เพิ่มเครื่องจักร"}
                 </Button>
               </div>
             </form>
           </Card>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

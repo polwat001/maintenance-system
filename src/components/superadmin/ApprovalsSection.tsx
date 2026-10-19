@@ -152,7 +152,7 @@ export function ApprovalsSection() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-purple-600" />
+            <ShieldCheck className="h-6 w-6 text-primary" />
             ศูนย์การอนุมัติส่วนกลาง (Unified Approvals Hub)
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -230,7 +230,7 @@ export function ApprovalsSection() {
             variant={activeTab === "po" ? "default" : "outline"}
             size="sm"
             onClick={() => setActiveTab("po")}
-            className={cn(activeTab === "po" && "bg-purple-600 hover:bg-purple-700 text-white")}
+            className={cn(activeTab === "po" && "bg-primary hover:bg-primary/90 text-primary-foreground")}
           >
             <ShoppingCart className="h-4 w-4 mr-1.5" />
             ใบสั่งซื้ออะไหล่ (Purchase Orders)
@@ -245,7 +245,7 @@ export function ApprovalsSection() {
             variant={activeTab === "user" ? "default" : "outline"}
             size="sm"
             onClick={() => setActiveTab("user")}
-            className={cn(activeTab === "user" && "bg-purple-600 hover:bg-purple-700 text-white")}
+            className={cn(activeTab === "user" && "bg-primary hover:bg-primary/90 text-primary-foreground")}
           >
             <UserCheck className="h-4 w-4 mr-1.5" />
             คำขอสิทธิ์ผู้ใช้งาน (User Access)
@@ -362,7 +362,7 @@ export function ApprovalsSection() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRejectPO(po.id)}
-                                className="h-8 px-2 text-xs text-red-600 hover:bg-red-50 border-red-200"
+                                className="h-8 px-2 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-100/70 border-red-200"
                               >
                                 ปฏิเสธ
                               </Button>
@@ -431,7 +431,7 @@ export function ApprovalsSection() {
                         </td>
 
                         <td className="py-3 px-4">
-                          <span className="inline-block px-2.5 py-0.5 rounded bg-purple-100 text-purple-800 text-xs font-semibold border border-purple-200">
+                          <span className="inline-block px-2.5 py-0.5 rounded bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
                             {ROLE_LABEL[req.requested_role] ?? req.requested_role}
                           </span>
                         </td>
@@ -469,7 +469,7 @@ export function ApprovalsSection() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRejectUser(req.id)}
-                                className="h-8 px-2 text-xs text-red-600 hover:bg-red-50 border-red-200"
+                                className="h-8 px-2 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-100/70 border-red-200"
                               >
                                 ปฏิเสธ
                               </Button>

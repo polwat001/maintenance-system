@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { requestStore, useRequests } from "@/lib/requestStore";
 import { timeAgo } from "@/lib/mockData";
-import { ArrowLeft, Bell, CheckCheck, CircleDot, LogOut } from "lucide-react";
+import { ArrowLeft, Bell, CheckCheck, CircleDot } from "lucide-react";
 
 const FALLBACK_REQUESTER_NAME = "นภดล ฝ่ายผลิต";
 
@@ -95,15 +95,6 @@ const NotificationCenter = () => {
             <div className="text-xs uppercase tracking-wider text-primary-foreground/70">Requester · Notifications</div>
             <h1 className="font-bold truncate">Notification Center</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-primary-foreground hover:bg-white/10"
-            onClick={() => navigate("/")}
-            aria-label="ออกจากระบบ"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
         </div>
       </header>
 

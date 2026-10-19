@@ -1,16 +1,24 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   ClipboardCheck, LogOut, Plus, Calendar, Clock, CheckCircle2,
   AlertTriangle, XCircle, ChevronRight, User, Filter, Search,
   ArrowLeft, MapPin, BarChart3, Activity, ExternalLink, Wrench,
   FileSpreadsheet, Sparkles, Layers, Sliders, Trash2, Eye, PenTool,
-  Check, FileText, CheckSquare, Settings2, Menu, X, LayoutDashboard,
-  ShieldCheck, Package
+  Check, FileText, CheckSquare, Settings2, Menu, X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import {
   MOCK_QC_SCHEDULES,
@@ -199,26 +207,31 @@ function CreateMatrixTemplateModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl border max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in">
-        <div className="p-5 border-b bg-muted/30 flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true">
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 bg-card rounded-2xl shadow-2xl w-full max-w-2xl border max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in">
+        <div className="p-4 sm:p-5 border-b bg-muted/30 flex justify-between items-center">
           <div>
             <span className="text-[10px] uppercase font-bold tracking-wider text-primary">QC Form Builder</span>
-            <h3 className="font-bold text-base text-foreground">สร้างแม่แบบ QC ใหม่ (Matrix Template)</h3>
+            <h3 className="font-bold text-sm sm:text-base text-foreground">สร้างแม่แบบ QC ใหม่ (Matrix Template)</h3>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}><XCircle className="h-5 w-5" /></Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
-          <div className="rounded-xl bg-primary/5 border border-primary/20 p-3.5 space-y-2">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 sm:space-y-5 text-xs">
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 sm:p-3.5 space-y-2">
             <div className="flex items-center gap-1.5 font-bold text-primary text-xs">
               <Sparkles className="h-4 w-4" /> เลือกแม่แบบมาตรฐานโรงงานสำเร็จรูป (1-Click Presets):
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs bg-white hover:bg-primary/10 border-primary/30 text-primary gap-1"
+                className="text-xs justify-start h-auto py-1.5 px-2.5 bg-white hover:bg-primary/10 border-primary/30 text-primary gap-1 text-left whitespace-normal"
                 onClick={() => handleLoadPreset("hourly")}
               >
                 ⏱️ ตารางตรวจเครื่องคัดแยก & สั่น 24 ชม. (ตามรูป 2)
@@ -226,7 +239,7 @@ function CreateMatrixTemplateModal({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs bg-white hover:bg-primary/10 border-primary/30 text-primary gap-1"
+                className="text-xs justify-start h-auto py-1.5 px-2.5 bg-white hover:bg-primary/10 border-primary/30 text-primary gap-1 text-left whitespace-normal"
                 onClick={() => handleLoadPreset("rollermill")}
               >
                 🏭 ROLLERMILL PARAMETERS — Line C (ตามรูป 1)
@@ -235,7 +248,7 @@ function CreateMatrixTemplateModal({
           </div>
 
           <Field label="ประเภทรูปแบบตาราง:">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setTemplateType("hourly_matrix")}
@@ -304,56 +317,81 @@ function CreateMatrixTemplateModal({
               <label className="text-xs font-bold text-foreground">
                 รายการตรวจสอบ / พารามิเตอร์ ({rows.length} รายการ):
               </label>
-              <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={handleAddRow}>
-                <Plus className="h-3 w-3" /> เพิ่มรายการ
+              <Button size="sm" variant="outline" className="text-xs h-8 sm:h-7 gap-1" onClick={handleAddRow}>
+                <Plus className="h-3.5 w-3.5" /> เพิ่มรายการ
               </Button>
             </div>
 
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-64 sm:max-h-56 overflow-y-auto pr-1">
               {rows.map((row, idx) => (
-                <div key={row.row_id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border">
-                  <span className="font-mono text-muted-foreground w-5 text-center shrink-0">{idx + 1}</span>
-                  <Input
-                    className="flex-1 h-8 text-xs"
-                    value={row.title}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, title: v } : r)));
-                    }}
-                  />
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-xs"
-                    value={row.input_type}
-                    onChange={(e) => {
-                      const v = e.target.value as "status_symbol" | "number" | "text";
-                      setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, input_type: v } : r)));
-                    }}
-                  >
-                    <option value="status_symbol">สัญลักษณ์ (✓, O, ✗, -)</option>
-                    <option value="number">ตัวเลข (วัดค่า)</option>
-                    <option value="text">ข้อความ</option>
-                  </select>
-
-                  {row.input_type === "number" && (
+                <div
+                  key={row.row_id}
+                  className="p-2.5 sm:p-2 rounded-lg bg-muted/40 border border-border/80 hover:border-border transition-colors space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-2"
+                >
+                  {/* แถวที่ 1 บนมือถือ (หรือส่วนซ้ายบนจอใหญ่): ลำดับ + ช่องพิมพ์ชื่อรายการ + ปุ่มลบบนมือถือ */}
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="h-6 w-6 rounded bg-muted/80 text-muted-foreground font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
                     <Input
-                      placeholder="หน่วย เช่น bar"
-                      className="w-20 h-8 text-xs font-mono"
-                      value={row.unit || ""}
+                      placeholder="ชื่อรายการตรวจสอบ / พารามิเตอร์"
+                      className="flex-1 h-9 sm:h-8 text-xs font-medium"
+                      value={row.title}
                       onChange={(e) => {
                         const v = e.target.value;
-                        setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, unit: v } : r)));
+                        setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, title: v } : r)));
                       }}
                     />
-                  )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 sm:hidden text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 shrink-0"
+                      onClick={() => handleRemoveRow(idx)}
+                      title="ลบรายการ"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-rose-600"
-                    onClick={() => handleRemoveRow(idx)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {/* แถวที่ 2 บนมือถือ (หรือส่วนขวาบนจอใหญ่): ชนิดข้อมูล + หน่วย (ถ้าเป็นตัวเลข) + ปุ่มลบบนจอใหญ่ */}
+                  <div className="flex items-center gap-2 pl-8 sm:pl-0 shrink-0">
+                    <select
+                      className="flex-1 sm:w-44 h-9 sm:h-8 rounded-md border bg-background px-2 text-xs font-medium focus:ring-1 focus:ring-ring"
+                      value={row.input_type}
+                      onChange={(e) => {
+                        const v = e.target.value as "status_symbol" | "number" | "text";
+                        setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, input_type: v } : r)));
+                      }}
+                    >
+                      <option value="status_symbol">สัญลักษณ์ (✓, O, ✗, -)</option>
+                      <option value="number">ตัวเลข (วัดค่า)</option>
+                      <option value="text">ข้อความ</option>
+                    </select>
+
+                    {row.input_type === "number" && (
+                      <Input
+                        placeholder="หน่วย เช่น bar"
+                        className="w-24 sm:w-20 h-9 sm:h-8 text-xs font-mono"
+                        value={row.unit || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, unit: v } : r)));
+                        }}
+                      />
+                    )}
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="hidden sm:inline-flex h-8 w-8 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 shrink-0"
+                      onClick={() => handleRemoveRow(idx)}
+                      title="ลบรายการ"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -452,11 +490,19 @@ function NewScheduleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg border max-h-[90vh] overflow-y-auto animate-in fade-in">
-        <div className="p-5 border-b sticky top-0 bg-card z-10">
-          <h3 className="font-bold text-base">สร้างกำหนดการตรวจ QC ใหม่</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">เลือกแม่แบบตารางตรวจและกำหนดเครื่องจักร</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 bg-card rounded-2xl shadow-2xl w-full max-w-lg border max-h-[90vh] overflow-y-auto animate-in fade-in">
+        <div className="p-5 border-b sticky top-0 bg-card z-10 flex items-start justify-between">
+          <div>
+            <h3 className="font-bold text-base">สร้างกำหนดการตรวจ QC ใหม่</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">เลือกแม่แบบตารางตรวจและกำหนดเครื่องจักร</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="ปิด"><X className="h-5 w-5" /></Button>
         </div>
         <div className="p-5 space-y-4 text-xs">
           <Field label="รูปแบบแบบฟอร์มที่ใช้ตรวจ:">
@@ -484,28 +530,36 @@ function NewScheduleModal({
             </div>
 
             {form.template_kind === "matrix" ? (
-              <select
-                className="h-9 w-full rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-2 focus:ring-ring font-medium"
+              <Select
                 value={form.matrix_template_id}
-                onChange={(e) => handleSelectMatrixTemplate(e.target.value)}
+                onValueChange={(val) => handleSelectMatrixTemplate(val)}
               >
-                {matrixTemplates.map((t) => (
-                  <option key={t.template_id} value={t.template_id}>
-                    {t.title} ({t.template_type === "hourly_matrix" ? "24 ชม." : "แยกกะ"}) — {t.line_or_zone || "โรงงาน"}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9 w-full text-xs font-medium">
+                  <SelectValue placeholder="เลือก Matrix Template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {matrixTemplates.map((t) => (
+                    <SelectItem key={t.template_id} value={t.template_id}>
+                      {t.title} ({t.template_type === "hourly_matrix" ? "24 ชม." : "แยกกะ"}) — {t.line_or_zone || "โรงงาน"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
-              <select
-                className="h-9 w-full rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                value={form.template_id}
-                onChange={(e) => upd("template_id", e.target.value)}
+              <Select
+                value={form.template_id || "none"}
+                onValueChange={(val) => upd("template_id", val === "none" ? "" : val)}
               >
-                <option value="">— ไม่เลือก —</option>
-                {MOCK_CHECKSHEET_TEMPLATES.map((t) => (
-                  <option key={t.template_id} value={t.template_id}>{t.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9 w-full text-xs">
+                  <SelectValue placeholder="— ไม่เลือก —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— ไม่เลือก —</SelectItem>
+                  {MOCK_CHECKSHEET_TEMPLATES.map((t) => (
+                    <SelectItem key={t.template_id} value={t.template_id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </Field>
 
@@ -524,29 +578,39 @@ function NewScheduleModal({
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="ความถี่">
-              <select className="h-9 w-full rounded-md border bg-background px-3 text-xs" value={form.frequency} onChange={(e) => upd("frequency", e.target.value)}>
-                <option value="daily">รายวัน</option>
-                <option value="monthly">รายเดือน</option>
-              </select>
+              <Select value={form.frequency} onValueChange={(val) => upd("frequency", val)}>
+                <SelectTrigger className="h-9 w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">รายวัน</SelectItem>
+                  <SelectItem value="monthly">รายเดือน</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="ผู้รับผิดชอบ">
-              <select className="h-9 w-full rounded-md border bg-background px-3 text-xs" value={form.assigned_to} onChange={(e) => upd("assigned_to", e.target.value)}>
-                {Object.values(QC_OFFICER_MAP).map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
-              </select>
+              <Select value={form.assigned_to} onValueChange={(val) => upd("assigned_to", val)}>
+                <SelectTrigger className="h-9 w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(QC_OFFICER_MAP).map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <Field label="วันที่ตรวจ *">
-              <Input type="date" value={form.scheduled_date} onChange={(e) => upd("scheduled_date", e.target.value)} />
+              <DatePicker value={form.scheduled_date} onChange={(val) => upd("scheduled_date", val)} disablePast />
             </Field>
             <Field label="เวลาเริ่ม">
-              <Input type="time" value={form.scheduled_time_start} onChange={(e) => upd("scheduled_time_start", e.target.value)} />
+              <TimePicker value={form.scheduled_time_start} onChange={(val) => upd("scheduled_time_start", val)} placeholder="00:00" />
             </Field>
             <Field label="เวลาสิ้นสุด">
-              <Input type="time" value={form.scheduled_time_end} onChange={(e) => upd("scheduled_time_end", e.target.value)} />
+              <TimePicker value={form.scheduled_time_end} onChange={(val) => upd("scheduled_time_end", val)} placeholder="00:00" />
             </Field>
           </div>
         </div>
@@ -579,15 +643,31 @@ function ScheduleDetailDrawer({
 }) {
   const s = STATUS_CONFIG[item.status];
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
-      <div className="bg-card w-full max-w-md h-full shadow-2xl flex flex-col border-l animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
+      {/* Backdrop: กดพื้นที่ด้านซ้ายเพื่อพับปิดแถบด้านขวา */}
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 bg-card w-full sm:max-w-md h-full shadow-2xl flex flex-col border-l animate-in slide-in-from-right duration-300 ease-out">
         <div className="p-5 border-b flex items-start justify-between">
           <div>
             <span className="font-mono text-xs text-primary font-bold">{item.schedule_id}</span>
             <h3 className="font-bold text-base mt-0.5">{item.title}</h3>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}><XCircle className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="ปิดแถบรายละเอียด"><XCircle className="h-5 w-5" /></Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
@@ -651,6 +731,21 @@ function ScheduleDetailDrawer({
 
 export default function QCDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Tab determination logic: URL search param > location state > default "schedule"
+  const getInitialTab = (): "schedule" | "templates" | "stats" => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "templates" || tabParam === "stats" || tabParam === "schedule") {
+      return tabParam;
+    }
+    const stateTab = (location.state as { from?: string } | null)?.from;
+    if (stateTab === "templates" || stateTab === "stats" || stateTab === "schedule") {
+      return stateTab;
+    }
+    return "schedule";
+  };
 
   // Sidebar toggle state for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -658,10 +753,29 @@ export default function QCDashboard() {
   // Data State
   const [schedules, setSchedules] = useState<QCSchedule[]>(MOCK_QC_SCHEDULES);
   const [matrixTemplates, setMatrixTemplates] = useState<QCMatrixTemplate[]>(MOCK_QC_MATRIX_TEMPLATES);
-  const [activeNav, setActiveNav] = useState<"schedule" | "templates" | "stats">("schedule");
+  const [activeNav, setActiveNav] = useState<"schedule" | "templates" | "stats">(getInitialTab);
   const [showNewSchedule, setShowNewSchedule] = useState(false);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<QCSchedule | null>(null);
+
+  // Sync tab if URL param or navigation state updates
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "templates" || tabParam === "stats" || tabParam === "schedule") {
+      setActiveNav(tabParam);
+    } else {
+      const stateTab = (location.state as { from?: string } | null)?.from;
+      if (stateTab === "templates" || stateTab === "stats" || stateTab === "schedule") {
+        setActiveNav(stateTab);
+      }
+    }
+  }, [searchParams, location.state]);
+
+  const handleNavSelect = (key: "schedule" | "templates" | "stats") => {
+    setActiveNav(key);
+    setSearchParams({ tab: key }, { replace: true });
+    setSidebarOpen(false);
+  };
 
   // Filters
   const [search, setSearch] = useState("");
@@ -733,9 +847,9 @@ export default function QCDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col text-slate-800">
+    <div className="fixed inset-0 flex flex-col bg-background text-slate-800 overflow-hidden">
       {/* ─── Topbar ────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
+      <header className="shrink-0 z-30 bg-gradient-primary text-primary-foreground shadow-md">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {/* Mobile menu toggle */}
@@ -777,24 +891,16 @@ export default function QCDashboard() {
             >
               <Plus className="h-4 w-4" /> สร้างกำหนดการ
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-primary-foreground hover:bg-white/10"
-              onClick={() => navigate("/")}
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
           </div>
         </div>
       </header>
 
       {/* ─── Body: Sidebar + Main Content ──────────────────────────────────── */}
-      <div className="flex-1 flex relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Mobile backdrop */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -802,27 +908,34 @@ export default function QCDashboard() {
         {/* ── Sidebar ── */}
         <aside
           className={cn(
-            "fixed lg:sticky top-[57px] z-20 h-[calc(100vh-57px)] w-64 shrink-0",
-            "flex flex-col bg-sidebar transition-transform duration-300 ease-in-out",
-            "border-r border-sidebar-border",
+            "fixed inset-y-0 left-0 z-40 lg:static lg:z-auto",
+            "w-64 h-full shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border shadow-2xl lg:shadow-none",
+            "transition-transform duration-300 ease-in-out",
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
           {/* User Card */}
-          <div className="p-4 border-b border-sidebar-border">
-            <div className="flex items-center gap-3">
+          <div className="p-4 border-b border-sidebar-border shrink-0 flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="h-10 w-10 rounded-full bg-secondary grid place-items-center text-secondary-foreground font-bold text-sm shrink-0">
                 QC
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-sidebar-foreground truncate">ณัฐพงศ์ สุขใจ</p>
-                <p className="text-xs text-sidebar-foreground/60">QC001 · Quality Control</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">QC001 · Quality Control</p>
               </div>
             </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground p-1 shrink-0"
+              aria-label="ปิดเมนู"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           {/* Nav Items */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          <nav className="flex-1 min-h-0 p-3 space-y-1 overflow-y-auto">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-3 py-2">
               เมนู QC
             </p>
@@ -831,10 +944,7 @@ export default function QCDashboard() {
               return (
                 <button
                   key={item.key}
-                  onClick={() => {
-                    setActiveNav(item.key);
-                    setSidebarOpen(false);
-                  }}
+                  onClick={() => handleNavSelect(item.key)}
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150",
                     isActive
@@ -849,7 +959,14 @@ export default function QCDashboard() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">{item.label}</p>
                       {item.badge !== undefined && item.badge > 0 && (
-                        <span className="bg-primary/20 text-sidebar-primary-foreground border border-sidebar-primary/40 rounded-full text-[10px] font-bold px-1.5 py-0.2">
+                        <span
+                          className={cn(
+                            "min-w-5 h-5 px-1 rounded-full text-[11px] font-bold font-sans leading-none pb-0.5 pl-px flex items-center justify-center select-none tabular-nums shadow-sm transition-all shrink-0",
+                            isActive
+                              ? "bg-red-500 text-white ring-2 ring-white"
+                              : "bg-red-500 text-white ring-1 ring-white/20"
+                          )}
+                        >
                           {item.badge}
                         </span>
                       )}
@@ -858,41 +975,13 @@ export default function QCDashboard() {
                       {item.sublabel}
                     </p>
                   </div>
-                  {isActive && <ChevronRight className="h-4 w-4 ml-auto shrink-0" />}
                 </button>
               );
             })}
-
-            <div className="pt-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-3 py-2">
-                ระบบอื่น ๆ ในโรงงาน
-              </p>
-              <button
-                onClick={() => navigate("/board")}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
-              >
-                <Wrench className="h-4 w-4" />
-                <span>กระดานช่างซ่อม</span>
-              </button>
-              <button
-                onClick={() => navigate("/spare-parts")}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
-              >
-                <Package className="h-4 w-4" />
-                <span>ระบบคลังอะไหล่</span>
-              </button>
-              <button
-                onClick={() => navigate("/admin/dashboard")}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                <span>Admin Dashboard</span>
-              </button>
-            </div>
           </nav>
 
           {/* Mini KPI Summary in Sidebar */}
-          <div className="p-3 border-t border-sidebar-border space-y-2">
+          <div className="p-3 border-t border-sidebar-border space-y-2 shrink-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/40 px-1">สรุปด่วน QC</p>
             {[
               { label: "กำหนดการทั้งหมด", value: kpi.total, dot: "bg-primary" },
@@ -912,7 +1001,7 @@ export default function QCDashboard() {
           </div>
 
           {/* Logout button */}
-          <div className="p-3 border-t border-sidebar-border">
+          <div className="p-3 border-t border-sidebar-border shrink-0">
             <button
               onClick={() => navigate("/")}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm"
@@ -924,7 +1013,7 @@ export default function QCDashboard() {
         </aside>
 
         {/* ── Main Content Area ── */}
-        <main className="flex-1 overflow-y-auto min-w-0">
+        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
           {/* Sub Header / Action Bar */}
           <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <div>
@@ -959,7 +1048,7 @@ export default function QCDashboard() {
             </div>
           </div>
 
-          <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
+          <div className="p-4 sm:p-6 space-y-6 w-full animate-slide-up">
             {/* Top KPI Cards in Main View */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
@@ -993,26 +1082,34 @@ export default function QCDashboard() {
                         onChange={(e) => setSearch(e.target.value)}
                       />
                     </div>
-                    <select
-                      className="h-9 rounded-md border bg-background px-3 text-xs"
+                    <Select
                       value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as any)}
+                      onValueChange={(val) => setStatusFilter(val as any)}
                     >
-                      <option value="all">ทุกสถานะ</option>
-                      <option value="scheduled">กำหนดการ</option>
-                      <option value="in-progress">กำลังตรวจ</option>
-                      <option value="done">ตรวจแล้ว</option>
-                      <option value="missed">ไม่ได้ตรวจ</option>
-                    </select>
-                    <select
-                      className="h-9 rounded-md border bg-background px-3 text-xs"
+                      <SelectTrigger className="h-9 w-full sm:w-[140px] text-xs">
+                        <SelectValue placeholder="ทุกสถานะ" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">ทุกสถานะ</SelectItem>
+                        <SelectItem value="scheduled">กำหนดการ</SelectItem>
+                        <SelectItem value="in-progress">กำลังตรวจ</SelectItem>
+                        <SelectItem value="done">ตรวจแล้ว</SelectItem>
+                        <SelectItem value="missed">ไม่ได้ตรวจ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
                       value={freqFilter}
-                      onChange={(e) => setFreqFilter(e.target.value as any)}
+                      onValueChange={(val) => setFreqFilter(val as any)}
                     >
-                      <option value="all">ทุกความถี่</option>
-                      <option value="daily">รายวัน</option>
-                      <option value="monthly">รายเดือน</option>
-                    </select>
+                      <SelectTrigger className="h-9 w-full sm:w-[130px] text-xs">
+                        <SelectValue placeholder="ทุกความถี่" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">ทุกความถี่</SelectItem>
+                        <SelectItem value="daily">รายวัน</SelectItem>
+                        <SelectItem value="monthly">รายเดือน</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </Card>
 
@@ -1091,7 +1188,7 @@ export default function QCDashboard() {
                           <Button
                             size="sm"
                             className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-xs font-semibold px-3.5 py-2 shadow-xs transition-all"
-                            onClick={() => navigate(`/qc/record/${item.schedule_id}`)}
+                            onClick={() => navigate(`/qc/record/${item.schedule_id}`, { state: { from: "schedule" } })}
                           >
                             <FileSpreadsheet className="h-3.5 w-3.5" /> ลงเวลาตรวจ
                           </Button>
@@ -1161,7 +1258,11 @@ export default function QCDashboard() {
                           variant="outline"
                           size="sm"
                           className="flex-1 text-xs gap-1"
-                          onClick={() => navigate(`/qc/record/QCS-2026-001`)}
+                          onClick={() => {
+                            const sampleSchedule = schedules.find((s) => s.matrix_template_id === tpl.template_id);
+                            const targetId = sampleSchedule ? sampleSchedule.schedule_id : "QCS-2026-001";
+                            navigate(`/qc/record/${targetId}`, { state: { from: "templates" } });
+                          }}
                         >
                           <Eye className="h-3.5 w-3.5" /> ดูตัวอย่างแบบฟอร์ม
                         </Button>
@@ -1238,7 +1339,7 @@ export default function QCDashboard() {
           onClose={() => setSelectedSchedule(null)}
           onCheckIn={handleCheckIn}
           onCheckOut={handleCheckOut}
-          onViewRecord={(id) => navigate(`/qc/record/${id}`)}
+          onViewRecord={(id) => navigate(`/qc/record/${id}`, { state: { from: "schedule" } })}
         />
       )}
     </div>

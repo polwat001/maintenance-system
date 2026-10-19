@@ -38,7 +38,7 @@ export function QCSection() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <ClipboardCheck className="h-6 w-6 text-purple-600" />
+            <ClipboardCheck className="h-6 w-6 text-primary" />
             ภาพรวมระบบตรวจสอบคุณภาพ (Quality Control Hub)
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -48,7 +48,7 @@ export function QCSection() {
         <div className="flex items-center gap-2">
           <Button
             onClick={() => navigate("/qc/dashboard")}
-            className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
           >
             เปิดหน้า QC Dashboard เต็มรูปแบบ <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
           </Button>
