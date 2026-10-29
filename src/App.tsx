@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +23,9 @@ import QCRecordDetail from "./pages/QCRecordDetail.tsx";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard.tsx";
 import ExecutivePurchaseApproval from "./pages/ExecutivePurchaseApproval.tsx";
 import ExecutiveUserApproval from "./pages/ExecutiveUserApproval.tsx";
+// ── Superadmin ──
+import SuperadminDashboard from "./pages/SuperadminDashboard.tsx";
+import SuperadminUserManagement from "./pages/SuperadminUserManagement.tsx";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +55,15 @@ const App = () => (
           <Route path="/executive/dashboard" element={<ExecutiveDashboard />} />
           <Route path="/executive/purchase-approval" element={<ExecutivePurchaseApproval />} />
           <Route path="/executive/user-approval" element={<ExecutiveUserApproval />} />
+          {/* Superadmin */}
+          <Route path="/superadmin/dashboard" element={<SuperadminDashboard />} />
+          <Route path="/superadmin/users" element={<SuperadminUserManagement />} />
+          <Route path="/superadmin/work-requests" element={<Navigate to="/superadmin/dashboard?tab=work-requests" replace />} />
+          <Route path="/superadmin/spare-parts" element={<Navigate to="/superadmin/dashboard?tab=spare-parts" replace />} />
+          <Route path="/superadmin/approvals" element={<Navigate to="/superadmin/dashboard?tab=approvals" replace />} />
+          <Route path="/superadmin/settings" element={<Navigate to="/superadmin/dashboard?tab=settings" replace />} />
+          <Route path="/superadmin/audit-log" element={<Navigate to="/superadmin/dashboard?tab=audit-log" replace />} />
+          <Route path="/superadmin/qc" element={<Navigate to="/superadmin/dashboard?tab=qc" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

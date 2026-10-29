@@ -6,11 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import {
   Wrench, ClipboardList, HardHat, ShieldCheck,
-  BarChart3, ClipboardCheck, TrendingUp,
+  BarChart3, ClipboardCheck, TrendingUp, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type Role = "technician" | "requester" | "admin" | "qc" | "executive";
+type Role = "technician" | "requester" | "admin" | "qc" | "executive" | "superadmin";
 
 const ROLE_CONFIG: Record<
   Role,
@@ -21,6 +21,7 @@ const ROLE_CONFIG: Record<
   admin:      { username: "admin",     password: "demo1234", emp_id: "ADMIN001", name: "ผู้จัดการฝ่ายซ่อมบำรุง", department: "Management",        navTarget: "/admin/dashboard",     label: "ผู้ดูแลระบบ" },
   qc:         { username: "qc",        password: "demo1234", emp_id: "QC001",    name: "ณัฐพงศ์ QC",             department: "ฝ่ายควบคุมคุณภาพ", navTarget: "/qc/dashboard",        label: "เจ้าหน้าที่ QC" },
   executive:  { username: "executive", password: "demo1234", emp_id: "EXEC001",  name: "ผู้บริหาร",              department: "Executive",         navTarget: "/executive/dashboard", label: "ผู้บริหาร" },
+  superadmin: { username: "superadmin", password: "demo1234", emp_id: "SA001",   name: "System Superadmin",        department: "IT",                navTarget: "/superadmin/dashboard", label: "Superadmin" },
 };
 
 const ROLE_CARDS: { role: Role; icon: React.ReactNode; title: string; subtitle: string; color: string }[] = [
@@ -29,6 +30,7 @@ const ROLE_CARDS: { role: Role; icon: React.ReactNode; title: string; subtitle: 
   { role: "admin",      icon: <BarChart3 className="h-6 w-6" />,      title: "ผู้ดูแลระบบ",    subtitle: "Admin",      color: "text-orange-600 bg-orange-50" },
   { role: "qc",         icon: <ClipboardCheck className="h-6 w-6" />, title: "เจ้าหน้าที่ QC", subtitle: "QC Officer", color: "text-violet-600 bg-violet-50" },
   { role: "executive",  icon: <TrendingUp className="h-6 w-6" />,     title: "ผู้บริหาร",      subtitle: "Executive",  color: "text-emerald-600 bg-emerald-50" },
+  { role: "superadmin", icon: <Crown className="h-6 w-6" />,          title: "Superadmin",   subtitle: "Full Access", color: "text-amber-600 bg-amber-50" },
 ];
 
 const Login = () => {
@@ -131,8 +133,8 @@ const Login = () => {
                   icon={r.icon} title={r.title} subtitle={r.subtitle} activeColor={r.color} />
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {ROLE_CARDS.slice(3).map((r) => (
+            <div className="grid grid-cols-3 gap-2">
+              {ROLE_CARDS.slice(3, 6).map((r) => (
                 <RoleCard key={r.role} active={role === r.role} onClick={() => handleRoleChange(r.role)}
                   icon={r.icon} title={r.title} subtitle={r.subtitle} activeColor={r.color} />
               ))}
